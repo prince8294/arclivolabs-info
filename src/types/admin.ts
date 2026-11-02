@@ -1,0 +1,26 @@
+export const adminPermissions = [
+  "dashboard:view",
+  "creator:read",
+  "creator:manage",
+  "brand:read",
+  "brand:manage",
+  "campaign:read",
+  "campaign:manage",
+  "enquiry:read",
+  "enquiry:manage",
+  "contact:read",
+  "contact:manage",
+  "team:read",
+  "team:manage",
+  "content:read",
+  "content:manage",
+  "analytics:read",
+  "finance:read",
+  "finance:manage",
+  "notification:read",
+  "activity:read",
+  "settings:read",
+  "settings:manage",
+] as const;
+
+export type AdminPermission = typeof adminPermissions[number];

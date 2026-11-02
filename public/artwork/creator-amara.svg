@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 960" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="55" y1="27" x2="727" y2="934" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E5A98F"/>
+      <stop offset=".55" stop-color="#A75C71"/>
+      <stop offset="1" stop-color="#503448"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="303" y1="584" x2="500" y2="944" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F2C6A7"/>
+      <stop offset="1" stop-color="#E49E91"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="960" rx="32" fill="url(#bg)"/>
+  <circle cx="607" cy="202" r="142" fill="#F6D6A9" fill-opacity=".74"/>
+  <path d="M71 960c54-154 170-250 328-250s273 96 328 250H71Z" fill="#563A4C" fill-opacity=".52"/>
+  <path d="M206 960c8-212 87-323 200-323 124 0 195 115 205 323H206Z" fill="#3F2B42"/>
+  <path d="M310 540c-23-122 10-243 116-253 115-10 159 88 129 255-19 108-66 169-127 169-69 0-101-62-118-171Z" fill="#28202E"/>
+  <path d="M333 463c7-100 38-161 105-161s109 61 108 161v100c-1 92-48 151-107 151-60 0-106-60-106-151V463Z" fill="#965946"/>
+  <path d="M331 430c10-102 59-167 133-167 65 0 109 40 122 124-48-44-101-45-148-18-32 19-68 49-107 61Z" fill="#2A2030"/>
+  <path d="M346 453c-40 31-52 72-35 117M555 436c38 30 48 78 31 122" stroke="#2A2030" stroke-width="25" stroke-linecap="round"/>
+  <path d="M376 492c15-8 29-8 42-1M468 490c14-8 29-8 43-1" stroke="#39272E" stroke-width="7" stroke-linecap="round"/>
+  <ellipse cx="396" cy="523" rx="7" ry="10" fill="#211E27"/>
+  <ellipse cx="490" cy="522" rx="7" ry="10" fill="#211E27"/>
+  <path d="M443 525c0 26-5 44-13 57 8 6 18 7 28 3" stroke="#76463F" stroke-width="7" stroke-linecap="round"/>
+  <path d="M414 608c18 13 40 13 60 0" stroke="#6D3541" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="337" cy="572" r="18" stroke="#F3C779" stroke-width="6"/>
+  <circle cx="565" cy="572" r="18" stroke="#F3C779" stroke-width="6"/>
+  <path d="M285 960c16-151 61-246 126-286l36 71 38-71c75 46 112 143 127 286H285Z" fill="url(#shirt)"/>
+  <path d="m410 674 37 70-56 103-45-155 64-18ZM485 674l-38 70 56 103 45-155-63-18Z" fill="#F4D6BF"/>
+</svg>
