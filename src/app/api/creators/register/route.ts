@@ -15,28 +15,34 @@ export const POST = withApiErrors(async (request) => {
   const address = getClientAddress(request);
   await enforceRateLimit({ scope: "creator-application-ip", identity: address, limit: 9, windowMs: 60 * 60 * 1000 });
   const body = creatorApplicationSchema.parse(await readJson(request));
-  await enforceRateLimit({ scope: "creator-application-email", identity: body.email, limit: 9, windowMs: 24 * 60 * 60 * 1000 });
+  const contactIdentity = body.email ?? body.phone;
+  if (!contactIdentity) throw new ApiError("Add an email address or phone number so our team can contact you.", 400);
+  await enforceRateLimit({ scope: "creator-application-contact", identity: contactIdentity, limit: 9, windowMs: 24 * 60 * 60 * 1000 });
 
   await connectToDatabase();
   const session = await auth();
-  if (session?.user?.role === "creator" && session.user.email?.toLowerCase() !== body.email) {
+  if (session?.user?.role === "creator" && body.email && session.user.email?.toLowerCase() !== body.email) {
     throw new ApiError("Use the email address associated with your creator account.", 403);
   }
+  const email = body.email ?? (session?.user?.role === "creator" ? session.user.email?.toLowerCase() : undefined);
 
   const socialChecks = [
-    ...(body.instagram ? [{ instagramUsername: normalizeUsername(body.instagram) }] : []),
-    ...(body.youtube ? [{ youtubeChannel: normalizeUsername(body.youtube) }] : []),
+    { socialProfile: body.socialProfile.trim().toLowerCase() },
+    ...(body.platform === "Instagram" ? [{ instagramUsername: normalizeUsername(body.socialProfile) }] : []),
+    ...(body.platform === "YouTube" ? [{ youtubeChannel: normalizeUsername(body.socialProfile) }] : []),
   ];
   const duplicate = await CreatorApplication.exists({
-    $or: [{ email: body.email }, ...socialChecks],
+    $or: [...(email ? [{ email }] : []), ...socialChecks],
   });
-  const existingCreator = await Creator.exists({
-    $or: [
-      { email: body.email },
-      ...(body.instagram ? [{ instagramUsername: normalizeUsername(body.instagram) }] : []),
-      ...(body.youtube ? [{ youtubeChannel: normalizeUsername(body.youtube) }] : []),
-    ],
-  });
+  const creatorChecks = [
+    ...(email ? [{ email }] : []),
+    ...(body.platform === "Instagram" ? [{ instagramUsername: normalizeUsername(body.socialProfile) }] : []),
+    ...(body.platform === "YouTube" ? [{ youtubeChannel: normalizeUsername(body.socialProfile) }] : []),
+    ...(!["Instagram", "YouTube"].includes(body.platform)
+      ? [{ otherSocialPlatforms: { $elemMatch: { platform: body.platform, username: normalizeUsername(body.socialProfile) } } }]
+      : []),
+  ];
+  const existingCreator = creatorChecks.length > 0 ? await Creator.exists({ $or: creatorChecks }) : null;
   if (duplicate || existingCreator) {
     throw new ApiError("An application or creator profile already uses this email or social account.", 409);
   }
@@ -44,16 +50,13 @@ export const POST = withApiErrors(async (request) => {
   const application = await CreatorApplication.create({
     referenceId: `CR-${randomUUID().replace(/-/g, "").slice(0, 12).toUpperCase()}`,
     name: body.name,
-    email: body.email,
+    email,
     phone: body.phone,
-    instagramUsername: body.instagram ? normalizeUsername(body.instagram) : undefined,
-    youtubeChannel: body.youtube ? normalizeUsername(body.youtube) : undefined,
+    socialProfile: body.socialProfile.trim().toLowerCase(),
+    ...(body.platform === "Instagram" ? { instagramUsername: normalizeUsername(body.socialProfile) } : {}),
+    ...(body.platform === "YouTube" ? { youtubeChannel: normalizeUsername(body.socialProfile) } : {}),
     primaryPlatform: body.platform,
-    contentCategory: body.category,
     followers: body.followers,
-    location: body.location,
-    portfolioUrl: body.portfolio || undefined,
-    introduction: body.introduction,
     user: session?.user?.id,
   });
   await recordCommittedActivity({
@@ -79,5 +82,7 @@ export const POST = withApiErrors(async (request) => {
 });
 
 function normalizeUsername(value: string): string {
-  return value.trim().replace(/^@/, "").toLowerCase();
+  const normalized = value.trim().replace(/^@/, "").toLowerCase();
+  const urlHandle = normalized.match(/^https?:\/\/(?:www\.)?[^/]+\/(?:@|channel\/|c\/|user\/)?([^/?#]+)/);
+  return urlHandle?.[1] ?? normalized;
 }

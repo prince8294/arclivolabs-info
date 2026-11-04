@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Camera, ChartNoAxesCombined, Handshake, Search, Share2, Sparkles } from "lucide-react";
-import type { CaseStudy, Creator, ServiceIconName } from "@/data/site-data";
+import { ArrowUpRight, Camera, ChartNoAxesCombined, Handshake, Search, Share2, Sparkles } from "lucide-react";
+import type { Creator, ServiceIconName } from "@/data/site-data";
 import { Reveal } from "@/components/reveal";
 
 const icons = { sparkles: Sparkles, search: Search, camera: Camera, share: Share2, handshake: Handshake, chart: ChartNoAxesCombined };
@@ -12,10 +12,6 @@ export function SectionHeading({ kicker, title, description, linkHref, linkText,
 
 export function CreatorCard({ creator }: { creator: Creator }) {
   return <Reveal className="reveal-card"><article className="creator-card"><Link className="creator-profile-link" href={`/creators/${creator.slug}`} aria-label={`View creator profile: ${creator.name}`}><div className="creator-image"><Image src={creator.image} alt={`${creator.name}${creator.isDemo ? ", illustrative demo profile" : ", creator profile"}`} fill sizes="(max-width: 700px) 90vw, (max-width: 1100px) 45vw, 30vw" /><span>{creator.isDemo ? "SAMPLE PROFILE" : "CREATOR PROFILE"}</span></div><div className="creator-card-info"><div><h3>{creator.name}</h3><p>{creator.category} · {creator.location}</p></div><span className="creator-arrow"><ArrowUpRight size={17} /></span></div></Link><div className="creator-meta"><span>{creator.platform}</span><span>{creator.followers}{creator.isDemo ? " · sample figure" : ""}</span></div><Link className="text-link creator-view-link" href={`/creators/${creator.slug}`}>View Profile <ArrowUpRight size={14} /></Link></article></Reveal>;
-}
-
-export function CaseCard({ study }: { study: CaseStudy }) {
-  return <Reveal className="reveal-card"><article className="case-card"><Link className="case-image-link" href={`/case-studies/${study.slug}`}><div className={`case-image ${study.tone}`}><Image src={study.image} alt={`${study.industry} campaign concept photograph`} fill sizes="(max-width: 700px) 90vw, 45vw" /><span>CAMPAIGN CONCEPT</span></div></Link><div className="case-content"><span className="case-industry">{study.industry} · {study.brand}</span><h3>{study.objective}</h3><p>{study.result}</p><Link className="text-link" href={`/case-studies/${study.slug}`}>View concept <ArrowRight size={15} /></Link></div></article></Reveal>;
 }
 
 export function ServiceIcon({ name }: { name: ServiceIconName }) {

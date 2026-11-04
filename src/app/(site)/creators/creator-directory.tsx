@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CreatorCard } from "@/components/site";
+import { BrandLoader } from "@/components/brand-loader";
 import { creators as demoCreators, type Creator } from "@/data/site-data";
 
 const portraitImages = [
@@ -130,15 +131,21 @@ export function CreatorDirectory() {
   const locations = Array.from(new Set([...demoCreators.map((creator) => creator.location.split(", ").pop() ?? ""), ...profiles.map((creator) => creator.location.split(", ").pop() ?? "")]));
 
   return <>
-    <div className="directory-controls">
-      <label className="search-field"><span className="sr-only">Search creators</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search creator profiles" /></label>
-      <label><span className="sr-only">Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option>All categories</option>{categories.map((option) => <option key={option}>{option}</option>)}</select></label>
-      <label><span className="sr-only">Platform</span><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>All platforms</option>{platforms.map((option) => <option key={option}>{option}</option>)}</select></label>
-      <label><span className="sr-only">Audience size</span><select value={followerRange} onChange={(event) => setFollowerRange(event.target.value)}><option>All audience sizes</option><option>Under 50K</option><option>50K–100K</option><option>100K+</option></select></label>
-      <label><span className="sr-only">Location</span><select value={location} onChange={(event) => setLocation(event.target.value)}><option>All locations</option>{locations.map((option) => <option key={option}>{option}</option>)}</select></label>
-      <label><span className="sr-only">Sort creators</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option>Featured</option><option>Name A–Z</option><option>Audience size</option></select></label>
+    <div className="creator-directory-toolbar">
+      <div className="creator-directory-heading">
+        <div><span className="eyebrow">MEET THE CREATORS</span><h2>Find a fresh <em>perspective.</em></h2></div>
+        <p>Search by what they make, where they are, and how they reach their community.</p>
+      </div>
+      <div className="directory-controls">
+        <label className="search-field"><span className="sr-only">Search creators</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search creators by name" /></label>
+        <label><span className="sr-only">Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option>All categories</option>{categories.map((option) => <option key={option}>{option}</option>)}</select></label>
+        <label><span className="sr-only">Platform</span><select value={platform} onChange={(event) => setPlatform(event.target.value)}><option>All platforms</option>{platforms.map((option) => <option key={option}>{option}</option>)}</select></label>
+        <label><span className="sr-only">Audience size</span><select value={followerRange} onChange={(event) => setFollowerRange(event.target.value)}><option>All audience sizes</option><option>Under 50K</option><option>50K–100K</option><option>100K+</option></select></label>
+        <label><span className="sr-only">Location</span><select value={location} onChange={(event) => setLocation(event.target.value)}><option>All locations</option>{locations.map((option) => <option key={option}>{option}</option>)}</select></label>
+        <label><span className="sr-only">Sort creators</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option>Featured</option><option>Name A–Z</option><option>Audience size</option></select></label>
+      </div>
     </div>
-    <p className="directory-result">{loading ? "Loading approved creator profiles…" : `${visibleProfiles.length} profiles · Public directory shows approved creators only.`}</p>
+    {loading ? <BrandLoader variant="inline" label="Loading approved creator profiles" /> : <p className="directory-result">{`${visibleProfiles.length} profiles · Public directory shows approved creators only.`}</p>}
     {loadError && <p className="demo-notice" role="status">{loadError}</p>}
     {visibleProfiles.length ? <div className="creator-grid">{visibleProfiles.map((creator) => <CreatorCard creator={creator} key={creator.slug} />)}</div> : <div className="empty-state">No approved creator profiles match those filters yet.</div>}
     <p className="demo-notice">Sample profiles, when shown, are illustrative demo content—not agency talent. Audience figures are unverified.</p>

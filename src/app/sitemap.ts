@@ -1,11 +1,9 @@
 import type { MetadataRoute } from "next";
-import { articles, caseStudies, creators } from "@/data/site-data";
+import { creators } from "@/data/site-data";
 
 const routes = [
-  "", "/about", "/services", "/creators", "/case-studies", "/contact", "/join-as-creator", "/insights", "/privacy-policy", "/terms", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email",
+  "", "/about", "/services", "/creators", "/contact", "/join-as-creator", "/privacy-policy", "/terms", "/login", "/register", "/forgot-password", "/reset-password", "/verify-email",
   ...creators.map(({ slug }) => `/creators/${slug}`),
-  ...caseStudies.map(({ slug }) => `/case-studies/${slug}`),
-  ...articles.map(({ slug }) => `/insights/${slug}`),
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

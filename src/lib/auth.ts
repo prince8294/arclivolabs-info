@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { ApiError } from "@/lib/api-response";
 import { loginSchema } from "@/lib/validations/auth";
 import { verifyCredentials } from "@/services/auth.service";
-import { userRoles } from "@/models/User";
+import { userRoles, type UserRole } from "@/models/User";
 
 const secureCookies = process.env.NODE_ENV === "production";
 
@@ -12,6 +12,14 @@ export const sessionCookieName = secureCookies
   : "next-auth.session-token";
 
 export const sessionMaxAge = 60 * 60 * 8;
+
+const adminRoles: readonly UserRole[] = [
+  "super_admin", "admin", "manager", "campaign_manager", "creator_manager", "sales_executive", "finance_manager",
+];
+
+export function landingPathForRole(role: UserRole): string {
+  return adminRoles.includes(role) ? "/admin/dashboard" : "/";
+}
 
 export const authConfig: NextAuthOptions = {
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,

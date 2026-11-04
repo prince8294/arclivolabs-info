@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ApiError } from "@/lib/api-response";
 import { requireRole } from "@/lib/permissions";
 import { PortalShell } from "@/components/portal/portal-shell";
+import { BrandLoader } from "@/components/brand-loader";
 
 async function getBrandUser() {
   try {
@@ -20,5 +21,5 @@ async function ProtectedBrand({ children }: Readonly<{ children: React.ReactNode
 }
 
 export default function BrandLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <Suspense fallback={<div className="portal-loading" role="status">Opening your brand workspace…</div>}><ProtectedBrand>{children}</ProtectedBrand></Suspense>;
+  return <Suspense fallback={<BrandLoader label="Opening your brand workspace" />}><ProtectedBrand>{children}</ProtectedBrand></Suspense>;
 }

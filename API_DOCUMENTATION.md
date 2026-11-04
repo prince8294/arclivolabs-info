@@ -22,6 +22,10 @@ Payment collection and settlement are handled outside the application. Campaign 
 
 The server validates role, purpose, file type, extension, declared size, and upload rate before signing. Configure the Cloudinary cloud name, API key/secret, and signed image/media presets as server-only environment variables. The presets enforce maximum sizes at Cloudinary. Admins can add Cloudinary image URLs to creator, brand, service, and blog records.
 
+## Creator applications
+
+`POST /api/creators/register` accepts a short application with a name, primary platform, social profile, follower/subscriber count, and at least one contact method (email or phone). In `/admin/creators?type=creator-applications`, authorized creator managers can complete the remaining profile details, add private internal notes, and move applications through `pending`, `contacted`, `qualified`, `approved`, or `rejected`. Approval creates or updates the creator profile; admins must first fill the email, phone, category, and location needed by that profile.
+
 ## Operations and messaging
 
 - `GET /api/health`: database readiness and configured service status only.

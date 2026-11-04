@@ -23,17 +23,15 @@ type ContactValues = z.infer<typeof contactSchema>;
 
 const creatorSchema = z.object({
   name: z.string().trim().min(2, "Please enter your full name."),
-  email: z.string().trim().email("Enter a valid email address."),
-  phone: z.string().trim().min(7, "Enter a phone number with at least 7 characters."),
-  instagram: z.string().optional(),
-  youtube: z.string().optional(),
+  email: z.union([z.string().trim().email("Enter a valid email address."), z.literal("")]),
+  phone: z.union([z.string().trim().min(7, "Enter a phone number with at least 7 characters."), z.literal("")]),
+  socialProfile: z.string().trim().min(1, "Add your profile link or username."),
   platform: z.enum(["Instagram", "TikTok", "YouTube", "Other"], { error: "Choose your primary platform." }),
-  category: z.string().trim().min(2, "Choose a content category."),
-  followers: z.string().regex(/^[\d,]+$/, "Use a whole number, for example 25,000."),
-  location: z.string().trim().min(2, "Enter your location."),
-  portfolio: z.union([z.string().trim().url("Enter a valid URL, including https://"), z.literal("")]),
-  introduction: z.string().trim().min(30, "Please introduce yourself in at least 30 characters."),
+  followers: z.string().regex(/^[\d,]+$/, "Enter your follower or subscriber count."),
   website: z.string().max(0),
+}).refine((value) => Boolean(value.email || value.phone), {
+  path: ["email"],
+  message: "Add an email address or phone number so our team can contact you.",
 });
 type CreatorValues = z.infer<typeof creatorSchema>;
 
@@ -134,8 +132,8 @@ export function ContactForm() {
       setNotice({ error: error instanceof Error ? error.message : "Unable to submit your enquiry.", success: "" });
     }
   });
-  return <form className="form-card" onSubmit={submit} noValidate>
-    <div className="form-heading"><span className="eyebrow">TELL US A LITTLE</span><h2>Let’s start a conversation.</h2><p>Your enquiry is securely validated and sent to the agency database. We do not send email or SMS confirmations in this phase.</p></div>
+  return <form className="form-card contact-form-card" onSubmit={submit} noValidate>
+    <div className="form-heading"><span className="eyebrow">YOUR ENQUIRY</span><h2>A few details to get us started.</h2><p>Your enquiry is validated and sent to our team. We do not send email or SMS confirmations at this time.</p></div>
     <div className="form-grid">
       <label className="form-field">Name<input {...register("name")} placeholder="Your name" autoComplete="name" /><FieldError>{errors.name?.message}</FieldError></label>
       <label className="form-field">Company name<input {...register("company")} placeholder="Company or brand" autoComplete="organization" /><FieldError>{errors.company?.message}</FieldError></label>
@@ -157,15 +155,16 @@ export function CreatorForm() {
   const [reference, setReference] = useState("");
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<CreatorValues>({
     resolver: zodResolver(creatorSchema),
-    defaultValues: { website: "", instagram: "", youtube: "", portfolio: "" },
+    defaultValues: { website: "", email: "", phone: "" },
   });
   const submit = handleSubmit(async ({ followers, ...values }) => {
     setNotice({ error: "", success: "" });
     try {
       const result = await submitJson("/api/creators/register", {
         ...values,
+        email: values.email || undefined,
+        phone: values.phone || undefined,
         followers: Number(followers.replace(/,/g, "")),
-        portfolio: values.portfolio || undefined,
       });
       setReference(typeof result.data?.referenceId === "string" ? result.data.referenceId : "");
       setNotice({ error: "", success: result.message });
@@ -175,7 +174,7 @@ export function CreatorForm() {
     }
   });
   const startAnotherApplication = () => {
-    reset({ website: "", instagram: "", youtube: "", portfolio: "" });
+    reset({ website: "", email: "", phone: "" });
     setReference("");
     setNotice({ error: "", success: "" });
   };
@@ -204,19 +203,14 @@ export function CreatorForm() {
       onSubmit={submit}
       noValidate
     >
-    <div className="form-heading"><span className="eyebrow">CREATOR APPLICATION</span><h2>Let’s get to know you.</h2><p>Your application will be saved for review. We do not send email confirmations in this phase.</p></div>
+    <div className="form-heading"><span className="eyebrow">CREATOR APPLICATION</span><h2>Let’s get to know you.</h2><p>Share five quick details. We will contact you for anything else. We do not send email confirmations in this phase.</p></div>
     <div className="form-grid">
       <label className="form-field">Full name<input {...register("name")} autoComplete="name" /><FieldError>{errors.name?.message}</FieldError></label>
-      <label className="form-field">Email<input {...register("email")} type="email" autoComplete="email" /><FieldError>{errors.email?.message}</FieldError></label>
-      <label className="form-field">Phone<input {...register("phone")} type="tel" autoComplete="tel" /><FieldError>{errors.phone?.message}</FieldError></label>
-      <label className="form-field">Location<input {...register("location")} placeholder="City, country" /><FieldError>{errors.location?.message}</FieldError></label>
-      <label className="form-field">Instagram username<input {...register("instagram")} placeholder="@yourhandle" /><FieldError>{errors.instagram?.message}</FieldError></label>
-      <label className="form-field">YouTube channel<input {...register("youtube")} placeholder="Channel name or URL" /><FieldError>{errors.youtube?.message}</FieldError></label>
+      <label className="form-field">Email (or phone below)<input {...register("email")} type="email" autoComplete="email" /><FieldError>{errors.email?.message}</FieldError></label>
+      <label className="form-field">Phone / WhatsApp (or email above)<input {...register("phone")} type="tel" autoComplete="tel" /><FieldError>{errors.phone?.message}</FieldError></label>
       <label className="form-field">Primary platform<select {...register("platform")} defaultValue=""><option value="" disabled>Choose platform</option><option>Instagram</option><option>TikTok</option><option>YouTube</option><option>Other</option></select><FieldError>{errors.platform?.message}</FieldError></label>
-      <label className="form-field">Content category<select {...register("category")} defaultValue=""><option value="" disabled>Choose category</option><option>Style & culture</option><option>Beauty</option><option>Food & living</option><option>Travel</option><option>Fitness & wellness</option><option>Design & technology</option><option>Other</option></select><FieldError>{errors.category?.message}</FieldError></label>
+      <label className="form-field">Social profile link or username<input {...register("socialProfile")} placeholder="@yourhandle or https://…" /><FieldError>{errors.socialProfile?.message}</FieldError></label>
       <label className="form-field">Followers / subscribers<input {...register("followers")} inputMode="numeric" placeholder="e.g. 25,000" /><FieldError>{errors.followers?.message}</FieldError></label>
-      <label className="form-field">Portfolio URL<input {...register("portfolio")} type="url" placeholder="https://" /><FieldError>{errors.portfolio?.message}</FieldError></label>
-      <label className="form-field form-full">Short introduction<textarea {...register("introduction")} rows={5} placeholder="Tell us what you create and what matters to your community." /><FieldError>{errors.introduction?.message}</FieldError></label>
       <label className="honeypot" aria-hidden="true">Leave this field empty<input {...register("website")} tabIndex={-1} autoComplete="off" /></label>
     </div>
     <button className="button button-dark" type="submit" disabled={isSubmitting}>{isSubmitting ? "Submitting application…" : "Submit creator application"} <span>↗</span></button>
@@ -232,9 +226,10 @@ export function LoginForm() {
   const submit = handleSubmit(async (values) => {
     setError("");
     try {
-      await submitJson("/api/auth/login", values);
+      const result = await submitJson("/api/auth/login", values);
+      const redirectTo = typeof result.data?.redirectTo === "string" && result.data.redirectTo.startsWith("/") ? result.data.redirectTo : "/";
       window.dispatchEvent(new Event("auth-session-changed"));
-      router.push("/");
+      router.push(redirectTo);
       router.refresh();
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Unable to sign in.");

@@ -7,7 +7,7 @@ import {
   Check,
   Sparkles,
 } from "lucide-react";
-import { caseStudies, creators, services } from "@/data/site-data";
+import { creators, services } from "@/data/site-data";
 import { CreatorCard, ServiceIcon } from "@/components/site";
 import { CtaBand } from "@/components/cta-band";
 import { Reveal } from "@/components/reveal";
@@ -16,11 +16,6 @@ const creatorImages = [
   "/images/creator-amara.jpg",
   "/images/creator-noah.jpg",
   "/images/creator-mina.jpg",
-];
-
-const campaignImages = [
-  "/images/concept-living.jpg",
-  "/images/concept-wellness.jpg",
 ];
 
 const process = [
@@ -42,11 +37,6 @@ export default function Home() {
     ...creator,
     image: creatorImages[index] ?? creator.image,
   }));
-  const featuredCampaigns = caseStudies.slice(0, 2).map((study, index) => ({
-    ...study,
-    image: campaignImages[index] ?? study.image,
-  }));
-
   return (
     <main className="home-page">
       <section className="home-hero">
@@ -64,6 +54,9 @@ export default function Home() {
           <div className="home-hero-actions">
             <Link className="home-button home-button-light" href="/contact">
               Let&apos;s make something <ArrowUpRight size={17} />
+            </Link>
+            <Link className="home-button home-button-creator" href="/join-as-creator">
+              Join as a creator <ArrowUpRight size={16} />
             </Link>
             <Link className="home-text-link home-text-link-light" href="/services">
               Meet your new creative partner <ArrowRight size={16} />
@@ -186,8 +179,8 @@ export default function Home() {
             <li><Check size={15} /> Creative that feels native, never forced</li>
             <li><Check size={15} /> Managed by one thoughtful team</li>
           </ul>
-          <Link className="home-button home-button-dark" href="/case-studies">
-            Explore the campaign concepts <ArrowUpRight size={16} />
+          <Link className="home-button home-button-dark" href="/contact">
+            Start a campaign <ArrowUpRight size={16} />
           </Link>
         </Reveal>
       </section>
@@ -233,33 +226,6 @@ export default function Home() {
           ))}
         </div>
         <p className="home-art-disclaimer">Illustrative creator profiles and audience figures. Original creative production for Arclivo.</p>
-      </section>
-
-      <section className="home-work home-section">
-        <Reveal className="home-section-heading">
-          <div>
-            <span className="home-section-kicker">GOOD IDEAS, FULLY THOUGHT THROUGH</span>
-            <h2>Possibility looks<br /><em>good on you.</em></h2>
-          </div>
-          <p>Original campaign concepts, imagined with people and culture at the centre.</p>
-        </Reveal>
-        <div className="home-work-grid">
-          {featuredCampaigns.map((study, index) => (
-            <Reveal className="home-work-reveal" delay={index * 0.1} key={study.slug}>
-              <article className="home-work-card">
-                <Link className="home-work-image" href={`/case-studies/${study.slug}`}>
-                  <Image src={study.image} alt={`Original ${study.industry.toLowerCase()} campaign concept photograph`} fill sizes="(max-width: 760px) 92vw, 46vw" />
-                  <span className="home-work-image-tag">CAMPAIGN CONCEPT <ArrowUpRight size={14} /></span>
-                </Link>
-                <div className="home-work-meta"><span>0{index + 1} / CREATIVE DIRECTION</span><span>{study.industry}</span></div>
-                <h3>{study.objective}</h3>
-                <Link className="home-text-link" href={`/case-studies/${study.slug}`}>
-                  Step inside the concept <ArrowUpRight size={15} />
-                </Link>
-              </article>
-            </Reveal>
-          ))}
-        </div>
       </section>
 
       <CtaBand

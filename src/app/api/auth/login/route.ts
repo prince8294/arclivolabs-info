@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { encode } from "next-auth/jwt";
 import { apiFailure, apiSuccess, withApiErrors } from "@/lib/api-response";
-import { authConfig, sessionCookieName, sessionMaxAge } from "@/lib/auth";
+import { authConfig, landingPathForRole, sessionCookieName, sessionMaxAge } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations/auth";
 import { enforceRateLimit, getClientAddress } from "@/lib/rate-limit";
 import { validateMutationOrigin, readJson } from "@/lib/request";
@@ -38,5 +38,5 @@ export const POST = withApiErrors(async (request) => {
     path: "/",
     maxAge: sessionMaxAge,
   });
-  return apiSuccess({ authenticated: true }, "Signed in successfully.");
+  return apiSuccess({ authenticated: true, role: user.role, redirectTo: landingPathForRole(user.role) }, "Signed in successfully.");
 });

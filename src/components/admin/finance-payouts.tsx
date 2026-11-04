@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { BrandLoader } from "@/components/brand-loader";
 
 type Row = Record<string, unknown> & { _id?: string; id?: string };
 type Envelope<T> = { success: boolean; message: string; data?: T; errors?: Array<{ message: string }> };
@@ -131,7 +132,7 @@ export function FinancePayoutsPanel({ canManage }: { canManage: boolean }) {
                 <button className="admin-small-button admin-reject" disabled={saving} onClick={() => void updatePayout(payment, "failed")}>Mark failed</button>
               </div> : "—"}</td>
             </tr>;
-          }) : <tr><td colSpan={7}>{loading ? "Loading payable records…" : "No creator payable records found."}</td></tr>}
+          }) : <tr><td colSpan={7}>{loading ? <BrandLoader variant="inline" label="Loading payable records" /> : "No creator payable records found."}</td></tr>}
         </tbody>
       </table>
     </div>

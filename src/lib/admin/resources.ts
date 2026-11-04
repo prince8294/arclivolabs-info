@@ -54,6 +54,20 @@ export const creatorAdminSchema = z.object({
   availability: z.enum(["available", "unavailable"]).optional(),
 }).strict();
 
+const creatorApplicationAdminSchema = z.object({
+  name: z.string().trim().min(2).max(120).optional(),
+  email: z.string().trim().email().max(254).nullable().optional(),
+  phone: z.string().trim().min(7).max(32).nullable().optional(),
+  socialProfile: z.string().trim().min(1).max(2048).optional(),
+  primaryPlatform: z.string().trim().min(2).max(50).optional(),
+  contentCategory: z.string().trim().min(2).max(100).nullable().optional(),
+  followers: z.number().int().min(0).max(1_000_000_000).nullable().optional(),
+  location: z.string().trim().min(2).max(160).nullable().optional(),
+  portfolioUrl: z.string().trim().url().max(2048).nullable().optional(),
+  introduction: z.string().trim().min(2).max(3000).nullable().optional(),
+  approvalStatus: z.enum(["pending", "contacted", "qualified", "approved", "rejected"]).optional(),
+}).strict();
+
 export const brandAdminSchema = z.object({
   companyName: z.string().trim().min(2).max(180),
   contactPerson: z.string().trim().min(2).max(120),
@@ -189,6 +203,12 @@ function idOrThrow(id: string): Types.ObjectId {
   return new Types.ObjectId(id);
 }
 
+function normalizeProfile(value: string): string {
+  const normalized = value.trim().replace(/^@/, "").toLowerCase();
+  const profileHandle = normalized.match(/^https?:\/\/(?:www\.)?[^/]+\/(?:@|channel\/|c\/|user\/)?([^/?#]+)/);
+  return profileHandle?.[1] ?? normalized;
+}
+
 export function permissionForResource(resource: AdminResource, operation: "read" | "manage"): import("@/lib/admin/permissions").AdminPermission {
   const permissions: Record<AdminResource, { read: import("@/lib/admin/permissions").AdminPermission; manage: import("@/lib/admin/permissions").AdminPermission }> = {
     creators: { read: "creator:read", manage: "creator:manage" },
@@ -243,7 +263,10 @@ export async function listAdminResource(resource: AdminResource, searchParams: U
     case "creator-applications": {
       const filter = { ...(p.status ? { approvalStatus: p.status } : {}), ...(rx ? { $or: [{ name: rx }, { referenceId: rx }, { email: rx }, { instagramUsername: rx }, { location: rx }] } : {}) };
       const [items, total] = await Promise.all([CreatorApplication.find(filter).sort(sort).skip(p.skip).limit(p.limit).lean(), CreatorApplication.countDocuments(filter)]);
-      return pageResult(items, total, p);
+      return pageResult(items.map((item) => ({
+        ...item,
+        socialProfile: item.socialProfile ?? (item.instagramUsername ? `@${item.instagramUsername}` : item.youtubeChannel ? `@${item.youtubeChannel}` : undefined),
+      })), total, p);
     }
     case "brands": {
       const industry = searchParams.get("industry")?.slice(0, 100);
@@ -328,7 +351,13 @@ export async function getAdminResource(resource: AdminResource, id: string, acto
       ]);
       return creator ? { ...creator, campaignHistory: campaigns, activityHistory: activity } : null;
     }
-    case "creator-applications": return CreatorApplication.findById(_id).populate("user", "name email").lean();
+    case "creator-applications": {
+      const application = await CreatorApplication.findById(_id).populate("user", "name email").lean();
+      return application ? {
+        ...application,
+        socialProfile: application.socialProfile ?? (application.instagramUsername ? `@${application.instagramUsername}` : application.youtubeChannel ? `@${application.youtubeChannel}` : undefined),
+      } : null;
+    }
     case "brands": {
       const brand = await Brand.findById(_id).lean();
       if (!brand) return null;
@@ -393,12 +422,51 @@ export async function updateAdminResource(resource: AdminResource, id: string, i
       break;
     }
     case "creator-applications": {
-      const body = z.object({ approvalStatus: z.enum(["approved", "rejected"]) }).strict().parse(input);
+      const body = creatorApplicationAdminSchema.parse(input);
       const application = await CreatorApplication.findById(_id);
       if (!application) throw new ApiError("Creator application not found.", 404);
-      application.approvalStatus = body.approvalStatus;
+      if (body.email && await CreatorApplication.exists({ _id: { $ne: _id }, email: body.email })) {
+        throw new ApiError("Another creator application already uses this email address.", 409);
+      }
+      const nextEmail = body.email === null ? undefined : body.email ?? application.email;
+      const nextPhone = body.phone === null ? undefined : body.phone ?? application.phone;
+      if (!nextEmail && !nextPhone) {
+        throw new ApiError("Add an email address or phone number so the applicant can be contacted.", 400);
+      }
+      for (const [key, value] of Object.entries(body)) {
+        if (key === "approvalStatus") continue;
+        application.set(key, value === null ? undefined : value);
+      }
+      if (body.approvalStatus) application.approvalStatus = body.approvalStatus;
+      if (body.approvalStatus === "approved") {
+        const socialProfile = application.socialProfile ?? application.instagramUsername ?? application.youtubeChannel;
+        if (!application.email || !application.phone || !application.contentCategory
+          || application.followers === undefined || !application.location || !socialProfile) {
+          throw new ApiError("Before approval, add the applicant's email, phone, category, follower count, and location.", 400);
+        }
+      }
       await application.save();
       if (body.approvalStatus === "approved") {
+        const socialProfile = application.socialProfile ?? application.instagramUsername ?? application.youtubeChannel ?? "";
+        const socialUrl = /^https?:\/\//i.test(socialProfile) ? socialProfile : undefined;
+        const socialHandle = socialProfile.replace(/^@/, "");
+        const socialFields = application.primaryPlatform === "Instagram"
+          ? {
+            instagramUsername: application.instagramUsername ?? normalizeProfile(socialProfile),
+            ...(socialUrl ? { instagramUrl: socialUrl } : {}),
+          }
+          : application.primaryPlatform === "YouTube"
+            ? {
+              youtubeChannel: application.youtubeChannel ?? socialHandle,
+              ...(socialUrl ? { youtubeUrl: socialUrl } : {}),
+            }
+            : {
+              otherSocialPlatforms: [{
+                platform: application.primaryPlatform,
+                username: socialHandle,
+                ...(socialUrl ? { url: socialUrl } : {}),
+              }],
+            };
         await Creator.findOneAndUpdate(
           { email: application.email },
           {
@@ -407,8 +475,7 @@ export async function updateAdminResource(resource: AdminResource, id: string, i
               fullName: application.name,
               email: application.email,
               phone: application.phone,
-              instagramUsername: application.instagramUsername,
-              youtubeChannel: application.youtubeChannel,
+              ...socialFields,
               primaryPlatform: application.primaryPlatform,
               contentCategories: [application.contentCategory],
               followers: application.followers,
@@ -418,11 +485,11 @@ export async function updateAdminResource(resource: AdminResource, id: string, i
               user: application.user,
             },
           },
-          { upsert: true, returnDocument: "after", runValidators: true },
+          { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true },
         );
       }
       updated = application.toObject();
-      action = `creator.application_${body.approvalStatus}`;
+      if (body.approvalStatus) action = `creator.application_${body.approvalStatus}`;
       break;
     }
     case "brands": {

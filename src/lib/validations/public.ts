@@ -25,18 +25,16 @@ export const contactMessageSchema = z.object({
 
 export const creatorApplicationSchema = z.object({
   name: cleanText(120, 2),
-  email: emailAddress,
-  phone: phoneNumber,
-  instagram: cleanText(64, 1).optional(),
-  youtube: cleanText(250, 1).optional(),
+  email: emailAddress.optional(),
+  phone: phoneNumber.optional(),
+  socialProfile: cleanText(2048, 1),
   platform: z.enum(["Instagram", "TikTok", "YouTube", "Other"]),
-  category: cleanText(100, 2),
   followers: z.coerce.number().int().min(0).max(1_000_000_000),
-  location: cleanText(160, 2),
-  portfolio: z.union([safeUrl, z.literal("")]).optional(),
-  introduction: cleanText(3000, 30),
   website: z.string().max(0).optional(),
-}).strict();
+}).strict().refine((value) => Boolean(value.email || value.phone), {
+  path: ["email"],
+  message: "Add an email address or phone number so our team can contact you.",
+});
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),

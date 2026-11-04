@@ -10,6 +10,7 @@ import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
+import { BrandLoader } from "@/components/brand-loader";
 
 type DashboardPayload = {
   totals: {
@@ -36,7 +37,10 @@ type AnalyticsPayload = {
 };
 type ApiEnvelope<T> = { success: boolean; message: string; data?: T };
 
-const palette = ["#8063e8", "#3b82f6", "#21a67a", "#f0a548", "#e36c78", "#858c9c"];
+const palette = ["#111111", "#4b4b46", "#77776f", "#a3a39a", "#c9c9c0", "#e2e2da"];
+const tooltipStyle = { background: "#0b0b0b", border: "1px solid #0b0b0b", borderRadius: 6, color: "#fff", fontSize: 11, padding: "8px 10px", boxShadow: "0 14px 34px rgba(0,0,0,.22)" };
+const tooltipLabelStyle = { color: "#a8a8a0", fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase" as const };
+const tooltipItemStyle = { color: "#f7f7f3", fontSize: 11 };
 
 async function getData<T>(path: string): Promise<T> {
   const response = await fetch(path, { cache: "no-store" });
@@ -125,7 +129,7 @@ export function AdminDashboard() {
       <label className="admin-filter-control"><span>Date range</span><select value={range} onChange={(event) => setRange(event.target.value)}><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="12m">Last 12 months</option></select></label>
     </div>
     {error && <div className="admin-inline-error" role="alert">{error}</div>}
-    {loading && !stats ? <div className="admin-kpi-grid">{Array.from({ length: 8 }, (_, index) => <div className="admin-skeleton admin-kpi-skeleton" key={index} />)}</div> : <>
+    {loading && !stats ? <><BrandLoader variant="inline" label="Loading dashboard" /><div className="admin-kpi-grid">{Array.from({ length: 8 }, (_, index) => <div className="admin-skeleton admin-kpi-skeleton" key={index} />)}</div></> : <>
       <section className="admin-kpi-grid" aria-label="Key metrics">
         {cards.map(({ title, value, sub, icon: Icon, tone, href }) => {
           const content = <><span className={`admin-kpi-icon admin-tone-${tone}`}><Icon size={18} /></span><span className="admin-kpi-label">{title}</span><b className="admin-kpi-value">{value}</b><span className="admin-kpi-sub">{sub}</span></>;
@@ -142,9 +146,9 @@ export function AdminDashboard() {
         <article className="admin-panel admin-chart-panel">
           <div className="admin-panel-heading"><div><h2>Network growth</h2><p>Registrations and enquiries over the selected period</p></div><span className="admin-chart-legend"><i className="legend-creators" /> Creators <i className="legend-brands" /> Brands <i className="legend-enquiries" /> Enquiries</span></div>
           {loading && !analytics ? <div className="admin-skeleton admin-chart-skeleton" /> : <div className="admin-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={trend} margin={{ top: 10, right: 12, left: -18, bottom: 0 }}>
-            <defs><linearGradient id="creatorArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#8063e8" stopOpacity={0.17} /><stop offset="100%" stopColor="#8063e8" stopOpacity={0} /></linearGradient></defs>
-            <CartesianGrid vertical={false} stroke="#ececf1" /><XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#85899a" }} minTickGap={28} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#85899a" }} /><Tooltip />
-            <Area type="monotone" dataKey="creators" stroke="#8063e8" fill="url(#creatorArea)" strokeWidth={2} /><Area type="monotone" dataKey="brands" stroke="#3b82f6" fill="transparent" strokeWidth={2} /><Area type="monotone" dataKey="enquiries" stroke="#21a67a" fill="transparent" strokeWidth={2} />
+            <defs><linearGradient id="creatorArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#111111" stopOpacity={0.16} /><stop offset="100%" stopColor="#111111" stopOpacity={0} /></linearGradient></defs>
+            <CartesianGrid vertical={false} stroke="#e8e8e1" /><XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#85857d" }} minTickGap={28} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: "#85857d" }} /><Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} cursor={{ stroke: "#c9c9c0", strokeDasharray: "3 3" }} />
+            <Area type="monotone" dataKey="creators" stroke="#111111" fill="url(#creatorArea)" strokeWidth={2} /><Area type="monotone" dataKey="brands" stroke="#77776f" fill="transparent" strokeWidth={1.8} /><Area type="monotone" dataKey="enquiries" stroke="#b9b9b0" fill="transparent" strokeWidth={1.8} />
           </AreaChart></ResponsiveContainer></div>}
         </article>
         <article className="admin-panel admin-chart-panel">
@@ -152,7 +156,7 @@ export function AdminDashboard() {
           <div className="admin-pie-wrap">
             {analytics?.campaignStatuses.length ? <ResponsiveContainer width="100%" height={220}><PieChart><Pie data={analytics.campaignStatuses} dataKey="count" nameKey="_id" innerRadius={62} outerRadius={88} paddingAngle={4} stroke="none">
               {analytics.campaignStatuses.map((entry, index) => <Cell key={entry._id} fill={palette[index % palette.length]} />)}
-            </Pie><Tooltip /></PieChart></ResponsiveContainer> : <div className="admin-empty-chart">No campaign records in the database yet.</div>}
+            </Pie><Tooltip contentStyle={tooltipStyle} labelStyle={tooltipLabelStyle} itemStyle={tooltipItemStyle} /></PieChart></ResponsiveContainer> : <div className="admin-empty-chart">No campaign records in the database yet.</div>}
           </div>
           <div className="admin-status-legend">{(analytics?.campaignStatuses ?? []).map((item, index) => <span key={item._id}><i style={{ background: palette[index % palette.length] }} />{item._id}<b>{item.count}</b></span>)}</div>
         </article>

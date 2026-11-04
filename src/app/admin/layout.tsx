@@ -1,11 +1,27 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { DM_Sans, Fraunces } from "next/font/google";
 import { cookies } from "next/headers";
 import { ApiError } from "@/lib/api-response";
 import { auth, sessionCookieName } from "@/lib/auth";
 import { roleHasPermission } from "@/lib/admin/permissions";
 import { getCurrentUser } from "@/lib/permissions";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { BrandLoader } from "@/components/brand-loader";
+
+const adminSans = DM_Sans({
+  subsets: ["latin"],
+  weight: "variable",
+  variable: "--font-admin-sans",
+  display: "swap",
+});
+
+const adminSerif = Fraunces({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-admin-serif",
+  display: "swap",
+});
 
 async function ProtectedAdmin({ children }: Readonly<{ children: React.ReactNode }>) {
   const cookieStore = await cookies();
@@ -26,5 +42,7 @@ async function ProtectedAdmin({ children }: Readonly<{ children: React.ReactNode
 }
 
 export default function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <Suspense fallback={<div className="admin-loading-screen" role="status">Loading your secure workspace…</div>}><ProtectedAdmin>{children}</ProtectedAdmin></Suspense>;
+  return <div className={`${adminSans.variable} ${adminSerif.variable}`}>
+    <Suspense fallback={<BrandLoader label="Securing your workspace" className="admin-brand-loader" />}><ProtectedAdmin>{children}</ProtectedAdmin></Suspense>
+  </div>;
 }

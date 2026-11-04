@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, ChevronLeft, ChevronRight, CirclePlus, Download, ExternalLink, LoaderCircle, Pencil, Search, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChevronLeft, ChevronRight, CirclePlus, Download, ExternalLink, LoaderCircle, Pencil, Search, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { UserRole } from "@/models/User";
 import { FinancePayoutsPanel } from "@/components/admin/finance-payouts";
+import { BrandLoader } from "@/components/brand-loader";
 
 type AdminRecord = Record<string, unknown> & { _id?: string; id?: string };
 type Envelope<T> = { success: boolean; message: string; data?: T; errors?: Array<{ field?: string; message: string }> };
@@ -33,9 +34,16 @@ const config: Record<string, { title: string; singular: string; description: str
     ], statuses: ["pending", "approved", "rejected"], create: true,
   },
   "creator-applications": {
-    title: "Creator applications", singular: "application", description: "Review incoming creator applications. Approval adds the applicant to the creator network.",
-    columns: [["referenceId", "Reference"], ["name", "Applicant"], ["email", "Email"], ["primaryPlatform", "Platform"], ["followers", "Followers"], ["location", "Location"], ["approvalStatus", "Status"]],
-    fields: [], statuses: ["pending", "approved", "rejected"], create: false,
+    title: "Creator applications", singular: "application", description: "Review applicants, record follow-ups, complete missing profile details, and approve creators into the network.",
+    columns: [["referenceId", "Reference"], ["name", "Applicant"], ["email", "Email"], ["phone", "Phone"], ["primaryPlatform", "Platform"], ["socialProfile", "Social profile"], ["approvalStatus", "Status"]],
+    fields: [
+      { key: "name", label: "Full name" }, { key: "email", label: "Email", type: "email" },
+      { key: "phone", label: "Phone / WhatsApp" }, { key: "primaryPlatform", label: "Primary platform" },
+      { key: "socialProfile", label: "Social profile link or username" },
+      { key: "contentCategory", label: "Content category" }, { key: "followers", label: "Followers / subscribers", type: "number" },
+      { key: "location", label: "Location" }, { key: "portfolioUrl", label: "Portfolio URL", type: "url" },
+      { key: "introduction", label: "Introduction", type: "textarea" },
+    ], statuses: ["pending", "contacted", "qualified", "approved", "rejected"], create: false,
   },
   brands: {
     title: "Brand CRM", singular: "brand", description: "Manage company profiles and keep brand account records up to date.",
@@ -184,6 +192,10 @@ function reportRows(value: unknown[]): ReportRow[] {
   });
 }
 
+const reportTooltipStyle = { background: "#0b0b0b", border: "1px solid #0b0b0b", borderRadius: 6, color: "#fff", fontSize: 11, padding: "8px 10px", boxShadow: "0 14px 34px rgba(0,0,0,.22)" };
+const reportTooltipLabelStyle = { color: "#a8a8a0", fontSize: 9, letterSpacing: ".08em", textTransform: "uppercase" as const };
+const reportTooltipItemStyle = { color: "#f7f7f3", fontSize: 11 };
+
 function ReportChart({ name, value }: { name: string; value: unknown[] }) {
   const rows = reportRows(value);
   const metrics = (["count", "total", "amount", "budget"] as const).filter((metric) => rows.some((row) => row[metric] !== undefined));
@@ -191,8 +203,8 @@ function ReportChart({ name, value }: { name: string; value: unknown[] }) {
   if (!rows.length || !metrics.length) return <p className="admin-muted">No records for this range.</p>;
   return <div className="admin-report-chart"><ResponsiveContainer width="100%" height="100%">
     {trend
-      ? <LineChart data={rows} margin={{ top: 8, right: 12, left: -20, bottom: 8 }}><CartesianGrid stroke="#eeedf3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 10 }} /><YAxis allowDecimals={false} tick={{ fontSize: 10 }} /><Tooltip /><Line type="monotone" dataKey={metrics[0]} stroke="#8063e8" strokeWidth={2} dot={{ r: 3 }} /></LineChart>
-      : <BarChart data={rows} margin={{ top: 8, right: 12, left: -20, bottom: 8 }}><CartesianGrid stroke="#eeedf3" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 10 }} /><YAxis allowDecimals={false} tick={{ fontSize: 10 }} /><Tooltip />{metrics.map((metric, index) => <Bar key={metric} dataKey={metric} fill={["#8063e8", "#3b82f6", "#21a67a", "#f0a548"][index]} radius={[4, 4, 0, 0]} />)}</BarChart>}
+      ? <LineChart data={rows} margin={{ top: 8, right: 12, left: -20, bottom: 8 }}><CartesianGrid stroke="#e8e8e1" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 10, fill: "#85857d" }} tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#85857d" }} tickLine={false} axisLine={false} /><Tooltip contentStyle={reportTooltipStyle} labelStyle={reportTooltipLabelStyle} itemStyle={reportTooltipItemStyle} cursor={{ stroke: "#c9c9c0", strokeDasharray: "3 3" }} /><Line type="monotone" dataKey={metrics[0]} stroke="#111111" strokeWidth={2} dot={{ r: 3, fill: "#111111", strokeWidth: 0 }} /></LineChart>
+      : <BarChart data={rows} margin={{ top: 8, right: 12, left: -20, bottom: 8 }}><CartesianGrid stroke="#e8e8e1" vertical={false} /><XAxis dataKey="label" tick={{ fontSize: 10, fill: "#85857d" }} tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#85857d" }} tickLine={false} axisLine={false} /><Tooltip contentStyle={reportTooltipStyle} labelStyle={reportTooltipLabelStyle} itemStyle={reportTooltipItemStyle} cursor={{ fill: "rgba(17,17,17,.045)" }} />{metrics.map((metric, index) => <Bar key={metric} dataKey={metric} fill={["#111111", "#666660", "#a3a39a", "#d2d2ca"][index]} radius={[2, 2, 0, 0]} />)}</BarChart>}
   </ResponsiveContainer></div>;
 }
 
@@ -283,6 +295,8 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
         if (field.type === "number") values[field.key] = Number(raw);
         else if (field.type === "csv") values[field.key] = String(raw).split(",").map((part) => part.trim()).filter(Boolean);
         else values[field.key] = raw;
+      } else if (resource === "creator-applications" && ["email", "phone", "contentCategory", "followers", "location", "portfolioUrl", "introduction"].includes(field.key)) {
+        values[field.key] = null;
       }
     }
     setSaving(true);
@@ -349,10 +363,9 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
   const rowActions = (item: AdminRecord) => {
     const id = item._id;
     if (!id) return null;
-    if (resource === "creator-applications" && item.approvalStatus === "pending") return <>
-      <button className="admin-small-button admin-approve" onClick={() => update(item, { approvalStatus: "approved" }, "Application approved.")} disabled={saving}><Check size={14} />Approve</button>
-      <button className="admin-small-button admin-reject" onClick={() => update(item, { approvalStatus: "rejected" }, "Application rejected.")} disabled={saving}>Reject</button>
-    </>;
+    if (resource === "creator-applications") return <select className="admin-row-select" aria-label="Update application status" value={String(item.approvalStatus ?? "pending")} onChange={(event) => void update(item, { approvalStatus: event.target.value }, "Application status updated.")} disabled={saving}>
+      {(config["creator-applications"].statuses ?? []).map((value) => <option value={value} key={value}>{label(value)}</option>)}
+    </select>;
     if (resource === "creators") return <>
       {item.approvalStatus !== "approved" && <button className="admin-small-button admin-approve" onClick={() => update(item, { approvalStatus: "approved" }, "Creator approved.")} disabled={saving}>Approve</button>}
       {item.approvalStatus !== "rejected" && <button className="admin-small-button admin-reject" onClick={() => update(item, { approvalStatus: "rejected" }, "Creator rejected.")} disabled={saving}>Reject</button>}
@@ -409,7 +422,7 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
     </div>
 
     <div className="admin-panel admin-table-panel">
-      {loading ? <div className="admin-table-skeleton">{Array.from({ length: 7 }, (_, index) => <div className="admin-skeleton" key={index} />)}</div>
+      {loading ? <div className="admin-table-skeleton"><BrandLoader variant="inline" label="Loading records" />{Array.from({ length: 7 }, (_, index) => <div className="admin-skeleton" key={index} />)}</div>
         : items.length === 0 ? <div className="admin-empty-state"><span className="admin-empty-icon"><Search size={20} /></span><b>No records found</b><p>{search || status ? "Try changing the search or filters." : "Records will appear here as your agency starts using the system."}</p>{definition.create && canManage && <button className="admin-button" onClick={() => openForm()}><CirclePlus size={15} /> Add {definition.singular}</button>}</div>
           : <div className="admin-table-scroll"><table className="admin-table"><thead><tr>{definition.columns.map(([key, title]) => <th key={key}>{title}</th>)}<th className="admin-actions-head">Actions</th></tr></thead><tbody>
             {items.map((item, index) => <tr key={String(item._id ?? item.id ?? index)}>
@@ -523,6 +536,254 @@ function AdminRecordDetail({ section, resource, item, onEdit, definition, visibl
   </section>;
 }
 
+type ChartDatum = { label: string; value: number; secondary?: number };
+type GrowthPoint = { date: string; creators: number; brands: number; enquiries: number };
+
+const chartPalette = ["#111111", "#6f6f67", "#a3a39a", "#cbcbc3", "#e4e4dc"];
+const chartAxisTick = { fontSize: 9, fill: "#8b8b83" };
+const knownAnalyticsKeys = new Set([
+  "range", "financeAccess", "creatorGrowth", "brandGrowth", "enquiryTrend", "campaignStatuses",
+  "campaignCategories", "revenueTrend", "enquiryStatuses", "recordedTransactions", "contactMessages",
+]);
+
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function formatCount(value: number) {
+  return new Intl.NumberFormat().format(value);
+}
+
+function dateLabel(value: string) {
+  if (!/^\d{4}-\d{2}(-\d{2})?$/.test(value)) return value;
+  const date = new Date(`${value.length === 7 ? `${value}-01` : value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, value.length === 7 ? { month: "short", year: "2-digit" } : { day: "numeric", month: "short" }).format(date);
+}
+
+function seriesTotal(value: unknown): number {
+  if (!Array.isArray(value)) return 0;
+  return value.reduce((sum, item) => sum + (asNumber((item as { count?: unknown }).count) ?? 0), 0);
+}
+
+function growthSeries(data: Record<string, unknown>): GrowthPoint[] {
+  const points = new Map<string, GrowthPoint>();
+  const sources = [["creatorGrowth", "creators"], ["brandGrowth", "brands"], ["enquiryTrend", "enquiries"]] as const;
+  for (const [source, field] of sources) {
+    const series = data[source];
+    if (!Array.isArray(series)) continue;
+    for (const item of series) {
+      const row = item as { _id?: unknown; count?: unknown };
+      const date = typeof row._id === "string" ? row._id : null;
+      const count = asNumber(row.count);
+      if (!date || count === null) continue;
+      const point = points.get(date) ?? { date, creators: 0, brands: 0, enquiries: 0 };
+      point[field] = count;
+      points.set(date, point);
+    }
+  }
+  return [...points.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function statusSeries(value: unknown): ChartDatum[] {
+  if (!Array.isArray(value)) return [];
+  const counts = new Map<string, number>();
+  for (const item of value) {
+    const row = item as { _id?: unknown; count?: unknown };
+    const count = asNumber(row.count);
+    const id = row._id;
+    const name = typeof id === "string"
+      ? id
+      : typeof id === "object" && id !== null
+        ? String((id as Record<string, unknown>).status ?? "other")
+        : "other";
+    if (count === null) continue;
+    counts.set(name, (counts.get(name) ?? 0) + count);
+  }
+  return [...counts.entries()].map(([name, value]) => ({ label: name, value })).sort((a, b) => b.value - a.value);
+}
+
+function categorySeries(value: unknown): ChartDatum[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const row = item as { _id?: unknown; count?: unknown; budget?: unknown };
+    const id = row._id;
+    const count = asNumber(row.count);
+    if (count === null) return [];
+    const industry = typeof id === "object" && id !== null ? String((id as Record<string, unknown>).industry ?? "Other") : "Other";
+    const budget = asNumber(row.budget);
+    return [{ label: industry, value: count, ...(budget !== null ? { secondary: budget } : {}) }];
+  }).sort((a, b) => b.value - a.value);
+}
+
+function transactionSeries(value: unknown): ChartDatum[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const row = item as { _id?: unknown; amount?: unknown; count?: unknown };
+    const id = row._id;
+    const amount = asNumber(row.amount);
+    if (amount === null || typeof id !== "object" || id === null) return [];
+    const type = String((id as Record<string, unknown>).type ?? "other");
+    const currency = String((id as Record<string, unknown>).currency ?? "");
+    const count = asNumber(row.count);
+    return [{ label: `${type}${currency ? ` · ${currency}` : ""}`, value: amount, ...(count !== null ? { secondary: count } : {}) }];
+  }).sort((a, b) => b.value - a.value);
+}
+
+function revenueSeries(value: unknown): { rows: Array<Record<string, number | string>>; currencies: string[] } {
+  const rows = new Map<string, Record<string, number | string>>();
+  const currencies = new Set<string>();
+  if (!Array.isArray(value)) return { rows: [], currencies: [] };
+  for (const item of value) {
+    const record = item as { _id?: unknown; total?: unknown };
+    const id = record._id;
+    const total = asNumber(record.total);
+    if (total === null || typeof id !== "object" || id === null) continue;
+    const date = typeof (id as Record<string, unknown>).date === "string" ? String((id as Record<string, unknown>).date) : null;
+    const currency = typeof (id as Record<string, unknown>).currency === "string" ? String((id as Record<string, unknown>).currency) : "INR";
+    if (!date) continue;
+    const row = rows.get(date) ?? { date };
+    row[currency] = total;
+    rows.set(date, row);
+    currencies.add(currency);
+  }
+  return {
+    rows: [...rows.values()].sort((a, b) => String(a.date).localeCompare(String(b.date))),
+    currencies: [...currencies].sort(),
+  };
+}
+
+function StatStrip({ stats }: { stats: Array<{ label: string; value: number; note: string }> }) {
+  return <div className="admin-analytics-stats">
+    {stats.map((stat) => <article className="admin-panel admin-stat" key={stat.label}>
+      <span className="admin-kpi-label">{stat.label}</span>
+      <b>{formatCount(stat.value)}</b>
+      <small>{stat.note}</small>
+    </article>)}
+  </div>;
+}
+
+function GrowthChart({ data }: { data: Record<string, unknown> }) {
+  const rows = growthSeries(data);
+  const totals = rows.reduce((sum, row) => ({
+    creators: sum.creators + row.creators,
+    brands: sum.brands + row.brands,
+    enquiries: sum.enquiries + row.enquiries,
+  }), { creators: 0, brands: 0, enquiries: 0 });
+  return <article className="admin-panel admin-chart-card admin-report-wide">
+    <div className="admin-chart-head">
+      <div><h2>Network momentum</h2><p>New creators, brands and enquiries across the selected range</p></div>
+      <div className="admin-chart-key">
+        <span><i style={{ background: "#111111" }} />Creators <b>{formatCount(totals.creators)}</b></span>
+        <span><i style={{ background: "#77776f" }} />Brands <b>{formatCount(totals.brands)}</b></span>
+        <span><i style={{ background: "#b9b9b0" }} />Enquiries <b>{formatCount(totals.enquiries)}</b></span>
+      </div>
+    </div>
+    {rows.length ? <div className="admin-chart-frame"><ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={rows} margin={{ top: 12, right: 10, left: -20, bottom: 0 }}>
+        <defs>
+          <linearGradient id="analyticsGrowth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#111111" stopOpacity={0.18} />
+            <stop offset="100%" stopColor="#111111" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} stroke="#ecece6" strokeDasharray="2 5" />
+        <XAxis dataKey="date" tickFormatter={dateLabel} tickLine={false} axisLine={false} tick={chartAxisTick} minTickGap={26} />
+        <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={chartAxisTick} width={34} />
+        <Tooltip contentStyle={reportTooltipStyle} labelStyle={reportTooltipLabelStyle} itemStyle={reportTooltipItemStyle} labelFormatter={(value) => dateLabel(String(value))} cursor={{ stroke: "#c9c9c0", strokeDasharray: "3 3" }} />
+        <Area type="monotone" dataKey="creators" stroke="#111111" fill="url(#analyticsGrowth)" strokeWidth={2.2} activeDot={{ r: 4, fill: "#111111", stroke: "#fff", strokeWidth: 2 }} />
+        <Area type="monotone" dataKey="brands" stroke="#77776f" fill="transparent" strokeWidth={1.8} />
+        <Area type="monotone" dataKey="enquiries" stroke="#b9b9b0" fill="transparent" strokeWidth={1.8} />
+      </AreaChart>
+    </ResponsiveContainer></div> : <p className="admin-chart-empty">No growth activity recorded in this range.</p>}
+  </article>;
+}
+
+function DonutPanel({ title, description, rows }: { title: string; description: string; rows: ChartDatum[] }) {
+  const total = rows.reduce((sum, row) => sum + row.value, 0);
+  return <article className="admin-panel admin-chart-card">
+    <div className="admin-chart-head">
+      <div><h2>{title}</h2><p>{description}</p></div>
+      {total > 0 && <b className="admin-chart-total">{formatCount(total)}</b>}
+    </div>
+    {total > 0 ? <>
+      <div className="admin-donut-wrap"><div className="admin-donut">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={rows} dataKey="value" nameKey="label" innerRadius="64%" outerRadius="92%" paddingAngle={3} stroke="none">
+              {rows.map((row, index) => <Cell key={row.label} fill={chartPalette[index % chartPalette.length]} />)}
+            </Pie>
+            <Tooltip contentStyle={reportTooltipStyle} labelStyle={reportTooltipLabelStyle} itemStyle={reportTooltipItemStyle} />
+          </PieChart>
+        </ResponsiveContainer>
+        <span className="admin-donut-center"><b>{formatCount(total)}</b><small>records</small></span>
+      </div></div>
+      <ul className="admin-donut-legend">
+        {rows.map((row, index) => <li key={row.label}><i style={{ background: chartPalette[index % chartPalette.length] }} />{label(row.label)}<b>{formatCount(row.value)}</b></li>)}
+      </ul>
+    </> : <p className="admin-chart-empty">No records in this range.</p>}
+  </article>;
+}
+
+function RankPanel({ title, description, rows, secondaryLabel = "records" }: { title: string; description: string; rows: ChartDatum[]; secondaryLabel?: string }) {
+  const max = Math.max(...rows.map((row) => row.value), 1);
+  return <article className="admin-panel admin-chart-card">
+    <div className="admin-chart-head"><div><h2>{title}</h2><p>{description}</p></div></div>
+    {rows.length ? <div className="admin-rank-list">
+      {rows.map((row, index) => <div className="admin-rank-row" key={`${row.label}-${index}`}>
+        <span className="admin-rank-label" title={row.label}>{label(row.label)}</span>
+        <span className="admin-rank-track"><i style={{ width: `${Math.max(3, Math.round((row.value / max) * 100))}%` }} /></span>
+        <span className="admin-rank-value">{formatCount(row.value)}</span>
+        {row.secondary !== undefined && <small>{secondaryLabel} {formatCount(row.secondary)}</small>}
+      </div>)}
+    </div> : <p className="admin-chart-empty">No records in this range.</p>}
+  </article>;
+}
+
+function RevenuePanel({ value }: { value: unknown }) {
+  const series = revenueSeries(value);
+  return <article className="admin-panel admin-chart-card admin-report-wide">
+    <div className="admin-chart-head">
+      <div><h2>Recorded revenue</h2><p>Saved revenue transactions by currency — campaign budgets are excluded</p></div>
+      <div className="admin-chart-key">{series.currencies.map((currency, index) => <span key={currency}><i style={{ background: chartPalette[index % chartPalette.length] }} />{currency}</span>)}</div>
+    </div>
+    {series.rows.length ? <div className="admin-chart-frame admin-chart-frame-compact"><ResponsiveContainer width="100%" height="100%">
+      <LineChart data={series.rows} margin={{ top: 10, right: 10, left: -18, bottom: 0 }}>
+        <CartesianGrid vertical={false} stroke="#ecece6" strokeDasharray="2 5" />
+        <XAxis dataKey="date" tickFormatter={dateLabel} tickLine={false} axisLine={false} tick={chartAxisTick} minTickGap={26} />
+        <YAxis tickLine={false} axisLine={false} tick={chartAxisTick} width={46} />
+        <Tooltip contentStyle={reportTooltipStyle} labelStyle={reportTooltipLabelStyle} itemStyle={reportTooltipItemStyle} labelFormatter={(label) => dateLabel(String(label))} />
+        {series.currencies.map((currency, index) => <Line key={currency} type="monotone" dataKey={currency} stroke={chartPalette[index % chartPalette.length]} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#111111", stroke: "#fff", strokeWidth: 2 }} />)}
+      </LineChart>
+    </ResponsiveContainer></div> : <p className="admin-chart-empty">No recorded revenue in this range.</p>}
+  </article>;
+}
+
+function AnalyticsDashboard({ data }: { data: Record<string, unknown> }) {
+  const enquiryTotal = data.enquiryTrend !== undefined ? seriesTotal(data.enquiryTrend) : seriesTotal(data.enquiryStatuses);
+  const stats = [
+    { label: "New creators", value: seriesTotal(data.creatorGrowth), note: "Joined in this range" },
+    { label: "New brands", value: seriesTotal(data.brandGrowth), note: "Joined in this range" },
+    { label: "Enquiries", value: enquiryTotal, note: "Received in this range" },
+    ...(typeof data.contactMessages === "number" ? [{ label: "Contact messages", value: data.contactMessages, note: "Received in this range" }] : []),
+  ];
+  return <>
+    <StatStrip stats={stats} />
+    <div className="admin-report-grid">
+      <GrowthChart data={data} />
+      {Array.isArray(data.campaignStatuses) && <DonutPanel title="Campaign mix" description="Every saved campaign by current status" rows={statusSeries(data.campaignStatuses)} />}
+      {Array.isArray(data.campaignCategories) && <RankPanel title="Campaign categories" description="Campaigns by industry, highest first" rows={categorySeries(data.campaignCategories)} secondaryLabel="budget" />}
+      {Array.isArray(data.enquiryStatuses) && <RankPanel title="Enquiry pipeline" description="Leads grouped by current pipeline stage" rows={statusSeries(data.enquiryStatuses)} />}
+      {Array.isArray(data.revenueTrend) && <RevenuePanel value={data.revenueTrend} />}
+      {Array.isArray(data.recordedTransactions) && <RankPanel title="Recorded transactions" description="Revenue and expenses saved in this range" rows={transactionSeries(data.recordedTransactions)} />}
+      {Object.entries(data).filter(([key]) => !knownAnalyticsKeys.has(key)).map(([key, value]) => <article className="admin-panel admin-chart-card" key={key}>
+        <div className="admin-chart-head"><div><h2>{label(key)}</h2><p>Additional recorded metric</p></div></div>
+        {Array.isArray(value) ? <ReportChart name={key} value={value} /> : <p className="admin-muted">{text(value)}</p>}
+      </article>)}
+    </div>
+  </>;
+}
+
 export function AdminAnalyticsPage({ section }: { section: "analytics" | "reports" }) {
   return <AdminAnalytics section={section} />;
 }
@@ -556,9 +817,7 @@ function AdminAnalytics({ section }: { section: "analytics" | "reports" }) {
     <div className="admin-heading-actions">{section === "reports" && <a className="admin-button admin-button-secondary" href={`/api/admin/reports?${from && to ? `from=${from}&to=${to}` : `range=${range}`}&format=csv`}><Download size={15} /> Export CSV</a>}</div></div>
     <div className="admin-toolbar"><label className="admin-filter-control"><span>Preset range</span><select value={range} onChange={(event) => { setRange(event.target.value); setFrom(""); setTo(""); }}><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="12m">Last 12 months</option></select></label><label className="admin-filter-control"><span>From</span><input type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></label><label className="admin-filter-control"><span>To</span><input type="date" value={to} onChange={(event) => setTo(event.target.value)} /></label><button className="admin-button admin-button-secondary" onClick={() => void load()}>Apply range</button><button className="admin-button admin-button-secondary" onClick={() => window.print()}>Print</button></div>
     {error && <div className="admin-inline-error" role="alert">{error}</div>}
-    {loading ? <div className="admin-panel admin-panel-padding"><div className="admin-skeleton admin-chart-skeleton" /></div> : data && <div className="admin-report-grid">
-      {Object.entries(data).filter(([key]) => key !== "range" && key !== "financeAccess").map(([key, value]) => <article className="admin-panel admin-panel-padding" key={key}><h2>{label(key)}</h2>{Array.isArray(value) ? <ReportChart name={key} value={value} /> : <p className="admin-kpi-value">{text(value)}</p>}</article>)}
-    </div>}
+    {loading ? <div className="admin-panel admin-panel-padding"><BrandLoader variant="inline" label="Loading report" /><div className="admin-skeleton admin-chart-skeleton" /></div> : data && <AnalyticsDashboard data={data} />}
   </section>;
 }
 
@@ -581,5 +840,5 @@ export function AdminProfile() {
       setNotice(result.message);
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Unable to save profile."); }
   }
-  return <section className="admin-resource"><div className="admin-page-heading"><div><span className="admin-eyebrow">YOUR ACCOUNT</span><h1>My profile</h1><p>Update your personal details. Account role changes are managed separately.</p></div></div>{loading ? <div className="admin-panel admin-panel-padding"><div className="admin-skeleton admin-chart-skeleton" /></div> : <form className="admin-panel admin-panel-padding admin-profile-form" onSubmit={(event) => void save(event)}><label className="admin-form-field"><span>Full name</span><input name="name" defaultValue={String(profile?.name ?? "")} minLength={2} required /></label><label className="admin-form-field"><span>Email</span><input type="email" value={String(profile?.email ?? "")} disabled /></label><label className="admin-form-field"><span>Phone</span><input name="phone" defaultValue={String(profile?.phone ?? "")} /></label><label className="admin-form-field"><span>Role</span><input value={label(String(profile?.role ?? ""))} disabled /></label>{error && <p className="admin-form-error" role="alert">{error}</p>}{notice && <p className="admin-toast" role="status">{notice}</p>}<button className="admin-button">Save changes</button></form>}</section>;
+  return <section className="admin-resource"><div className="admin-page-heading"><div><span className="admin-eyebrow">YOUR ACCOUNT</span><h1>My profile</h1><p>Update your personal details. Account role changes are managed separately.</p></div></div>{loading ? <div className="admin-panel admin-panel-padding"><BrandLoader variant="inline" label="Loading your profile" /><div className="admin-skeleton admin-chart-skeleton" /></div> : <form className="admin-panel admin-panel-padding admin-profile-form" onSubmit={(event) => void save(event)}><label className="admin-form-field"><span>Full name</span><input name="name" defaultValue={String(profile?.name ?? "")} minLength={2} required /></label><label className="admin-form-field"><span>Email</span><input type="email" value={String(profile?.email ?? "")} disabled /></label><label className="admin-form-field"><span>Phone</span><input name="phone" defaultValue={String(profile?.phone ?? "")} /></label><label className="admin-form-field"><span>Role</span><input value={label(String(profile?.role ?? ""))} disabled /></label>{error && <p className="admin-form-error" role="alert">{error}</p>}{notice && <p className="admin-toast" role="status">{notice}</p>}<button className="admin-button">Save changes</button></form>}</section>;
 }

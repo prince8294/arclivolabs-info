@@ -1,8 +1,7 @@
 import bcrypt from "bcryptjs";
 import mongoose from "mongoose";
-import { articles, creators, services } from "@/data/site-data";
+import { creators, services } from "@/data/site-data";
 import { connectToDatabase } from "@/lib/db";
-import BlogPost from "@/models/BlogPost";
 import Creator from "@/models/Creator";
 import Service from "@/models/Service";
 import User from "@/models/User";
@@ -79,27 +78,7 @@ async function seed(): Promise<void> {
     );
   }
 
-  for (const article of articles) {
-    await BlogPost.updateOne(
-      { slug: article.slug },
-      { $set: {
-        title: article.title,
-        slug: article.slug,
-        excerpt: article.excerpt,
-        content: `${article.excerpt}\n\nThis is demo content for development only. Replace it with approved editorial copy before publication.`,
-        featuredImage: article.image,
-        category: article.category,
-        tags: [article.category.toLowerCase()],
-        author: admin._id,
-        isPublished: true,
-        publishedAt: new Date(),
-        isDemo: true,
-      } },
-      { upsert: true, runValidators: true },
-    );
-  }
-
-  console.info("Demo services, blog posts, creator profiles, and the configured development administrator are ready.");
+  console.info("Demo services, creator profiles, and the configured development administrator are ready.");
 }
 
 function parseFollowers(value: string): number {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BrandLoader } from "@/components/brand-loader";
 
 export type PortalEnvelope<T> = { success: boolean; message: string; data?: T; errors?: Array<{ field?: string; message: string }> };
 type UploadPurpose = "profile-image" | "brand-logo" | "portfolio" | "deliverable" | "message-attachment";
@@ -113,7 +114,7 @@ export function PortalError({ message, retry }: { message: string; retry?: () =>
 }
 
 export function PortalLoading({ count = 3 }: { count?: number }) {
-  return <div className="portal-skeleton-grid" role="status" aria-label="Loading"><span className="portal-skeleton-label">Loading workspace data…</span>{Array.from({ length: count }, (_, index) => <div className="portal-skeleton-card" key={index} />)}</div>;
+  return <div className="portal-loading-block"><BrandLoader variant="inline" label="Loading workspace data" /><div className="portal-skeleton-grid" aria-hidden="true">{Array.from({ length: count }, (_, index) => <div className="portal-skeleton-card" key={index} />)}</div></div>;
 }
 
 export function PortalEmpty({ title, description }: { title: string; description: string }) {

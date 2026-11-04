@@ -77,20 +77,21 @@ describe("public form validation", () => {
     expect(campaignPortalSchema.safeParse({ ...campaign, status: "approved" }).success).toBe(false);
   });
 
-  it("requires complete creator applications and rejects honeypot submissions", () => {
+  it("accepts short creator applications with one contact method and rejects honeypot submissions", () => {
     const application = {
       name: "Sample Creator",
-      email: "creator@example.com",
-      phone: "+1 555 123 4567",
       platform: "Instagram",
-      category: "Design",
+      socialProfile: "@samplecreator",
       followers: 25000,
-      location: "London, UK",
-      introduction: "I create design-led stories for my community.",
+      email: "creator@example.com",
     };
     expect(creatorApplicationSchema.safeParse(application).success).toBe(true);
     expect(creatorApplicationSchema.safeParse({ ...application, website: "spam" }).success).toBe(false);
+    expect(creatorApplicationSchema.safeParse({ ...application, email: undefined }).success).toBe(false);
+    expect(creatorApplicationSchema.safeParse({ ...application, email: undefined, phone: "+1 555 123 4567" }).success).toBe(true);
+    expect(creatorApplicationSchema.safeParse({ ...application, socialProfile: "" }).success).toBe(false);
     expect(creatorApplicationSchema.safeParse({ ...application, followers: -1 }).success).toBe(false);
+    expect(creatorApplicationSchema.safeParse({ ...application, category: "Beauty" }).success).toBe(false);
   });
 
   it("rejects missing enquiry fields and invalid contact messages", () => {

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ApiError } from "@/lib/api-response";
 import { requireRole } from "@/lib/permissions";
 import { PortalShell } from "@/components/portal/portal-shell";
+import { BrandLoader } from "@/components/brand-loader";
 
 async function getCreatorUser() {
   try {
@@ -20,5 +21,5 @@ async function ProtectedCreator({ children }: Readonly<{ children: React.ReactNo
 }
 
 export default function CreatorLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <Suspense fallback={<div className="portal-loading" role="status">Opening your creator workspace…</div>}><ProtectedCreator>{children}</ProtectedCreator></Suspense>;
+  return <Suspense fallback={<BrandLoader label="Opening your creator workspace" />}><ProtectedCreator>{children}</ProtectedCreator></Suspense>;
 }
