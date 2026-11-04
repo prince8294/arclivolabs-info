@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, CirclePlus, Download, ExternalLink, LoaderCircle, Pencil, Search, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
@@ -8,6 +9,13 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, P
 import type { UserRole } from "@/models/User";
 import { FinancePayoutsPanel } from "@/components/admin/finance-payouts";
 import { BrandLoader } from "@/components/brand-loader";
+
+// Modals mount into the admin frame so they keep the admin theme variables
+// while escaping the page transition's transformed/clipping containers.
+function AdminModalPortal({ children }: { children: ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.querySelector(".admin-frame") ?? document.body);
+}
 
 type AdminRecord = Record<string, unknown> & { _id?: string; id?: string };
 type Envelope<T> = { success: boolean; message: string; data?: T; errors?: Array<{ field?: string; message: string }> };
@@ -448,7 +456,7 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
     </>}
     {resource === "team" && invitations.length > 0 && <section className="admin-panel admin-panel-padding admin-invites-list"><div className="admin-panel-heading"><div><h2>Open invitations</h2><p>{invitations.length} invitation(s) awaiting acceptance</p></div></div><div className="admin-invitation-rows">{invitations.map((invite) => <div key={String(invite._id)}><b>{text(invite.name)}</b><span>{text(invite.email)}</span><span>{label(text(invite.role))}</span><small>Expires {text(invite.expiresAt)}</small></div>)}</div></section>}
 
-    {modal && <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(false); }}>
+    {modal && <AdminModalPortal><div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(false); }}>
       <form className="admin-modal" onSubmit={(event) => void submitForm(event)}>
         <div className="admin-modal-heading"><div><span className="admin-eyebrow">{formRecord ? "UPDATE RECORD" : "NEW RECORD"}</span><h2>{formRecord ? `Edit ${definition.singular}` : `Add ${definition.singular}`}</h2></div><button type="button" className="admin-icon-button" onClick={() => setModal(false)} aria-label="Close dialog"><X size={18} /></button></div>
         <div className="admin-form-grid">{visibleFields.map((field) => <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}>
@@ -462,7 +470,7 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
         {error && <p className="admin-form-error" role="alert">{error}</p>}
         <div className="admin-modal-actions"><button type="button" className="admin-button admin-button-secondary" onClick={() => setModal(false)}>Cancel</button><button type="submit" className="admin-button" disabled={saving}>{saving ? <><LoaderCircle size={15} className="admin-spin" />Saving…</> : formRecord ? "Save changes" : "Create record"}</button></div>
       </form>
-    </div>}
+    </div></AdminModalPortal>}
   </section>;
 }
 
@@ -524,7 +532,7 @@ function AdminRecordDetail({ section, resource, item, onEdit, definition, visibl
       {entityType && <article className="admin-panel admin-panel-padding"><h2>Internal notes</h2><p className="admin-panel-description">Visible to authorized agency team members only.</p><div className="admin-note-list">{notes.map((note) => <div key={String(note._id)}><p>{text(note.body)}</p><small>{text((note.author as AdminRecord | undefined)?.name)} · {text(note.createdAt)}</small></div>)}{notes.length === 0 && !noteError && <p className="admin-muted">No internal notes yet.</p>}</div>{noteError && <p className="admin-form-error" role="alert">{noteError}</p>}{canManage && <form className="admin-note-form" onSubmit={(event) => void addNote(event)}><textarea value={noteBody} onChange={(event) => setNoteBody(event.target.value)} maxLength={5000} required placeholder="Add a private note…" /><button className="admin-button" disabled={!noteBody.trim()}>Add note</button></form>}</article>}
     </div>
     {resource === "creators" && <article className="admin-panel admin-panel-padding"><div className="admin-panel-heading"><div><h2>Campaign history</h2><p>Current and past campaigns featuring this creator</p></div></div><p className="admin-muted">Campaign assignments are available on campaign detail records.</p></article>}
-    {modal && <div className="admin-modal-backdrop"><form className="admin-modal" onSubmit={(event) => submitForm(event)}><div className="admin-modal-heading"><div><span className="admin-eyebrow">UPDATE RECORD</span><h2>Edit {definition.singular}</h2></div><button className="admin-icon-button" type="button" onClick={() => closeModal()} aria-label="Close dialog"><X size={18} /></button></div>
+    {modal && <AdminModalPortal><div className="admin-modal-backdrop"><form className="admin-modal" onSubmit={(event) => submitForm(event)}><div className="admin-modal-heading"><div><span className="admin-eyebrow">UPDATE RECORD</span><h2>Edit {definition.singular}</h2></div><button className="admin-icon-button" type="button" onClick={() => closeModal()} aria-label="Close dialog"><X size={18} /></button></div>
       <div className="admin-form-grid">{visibleFields.map((field) => <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}><span>{field.label}</span>
         {field.type === "textarea" ? <textarea name={field.key} defaultValue={String(formRecord?.[field.key] ?? "")} rows={4} />
           : field.type === "select" ? <select name={field.key} defaultValue={String(formRecord?.[field.key] ?? field.options?.[0] ?? "")}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
@@ -532,7 +540,7 @@ function AdminRecordDetail({ section, resource, item, onEdit, definition, visibl
               : <input name={field.key} type={field.type === "csv" ? "text" : field.type ?? "text"} defaultValue={field.type === "csv" ? toCsv(formRecord?.[field.key]) : formatInputValue(field, formRecord?.[field.key])} min={field.type === "number" ? 0 : undefined} />}
         {field.hint && <small>{field.hint}</small>}
       </label>)}</div>{error && <p className="admin-form-error" role="alert">{error}</p>}
-      <div className="admin-modal-actions"><button type="button" className="admin-button admin-button-secondary" onClick={() => closeModal()}>Cancel</button><button type="submit" className="admin-button" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div></form></div>}
+      <div className="admin-modal-actions"><button type="button" className="admin-button admin-button-secondary" onClick={() => closeModal()}>Cancel</button><button type="submit" className="admin-button" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div></form></div></AdminModalPortal>}
   </section>;
 }
 

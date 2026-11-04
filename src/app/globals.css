@@ -3762,9 +3762,11 @@ body:has(.creator-application-page) .site-footer { display: none; }
   padding: clamp(30px, 4vw, 46px) clamp(20px, 3.4vw, 44px) 76px;
 }
 .admin-content > * { animation: admin-rise .55s cubic-bezier(.2, .7, .2, 1) both; }
+/* End on `transform: none`: a lingering transform would make fixed overlays
+   (modals) position and clip relative to this element instead of the viewport. */
 @keyframes admin-rise {
   from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Page headings */
@@ -4296,6 +4298,7 @@ body:has(.creator-application-page) .site-footer { display: none; }
   width: min(100%, 690px);
   max-height: min(90vh, 860px);
   overflow-y: auto;
+  margin: auto;
   padding: 27px;
   border: 1px solid #d8d8d0;
   border-top: 3px solid var(--admin-black);
@@ -4603,6 +4606,7 @@ body:has(.creator-application-page) .site-footer { display: none; }
     max-width: 100%;
     max-height: 92vh;
     max-height: 92dvh;
+    margin: auto 0 0;
     padding: 22px 17px calc(17px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
   }
