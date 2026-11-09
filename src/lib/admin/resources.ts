@@ -43,9 +43,16 @@ export const creatorAdminSchema = z.object({
   contentCategories: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
   followers: z.number().int().min(0).optional(),
   averageViews: z.number().int().min(0).optional(),
+  averageLikes: z.number().int().min(0).optional(),
+  averageComments: z.number().int().min(0).optional(),
+  averageReelViews: z.number().int().min(0).optional(),
   engagementRate: z.number().min(0).max(100).optional(),
+  audienceLocation: z.string().trim().max(300).optional(),
+  collaborationTypes: z.array(z.string().trim().max(80)).max(20).optional(),
+  pastBrandCollaborations: z.array(z.string().trim().max(200)).max(100).optional(),
   location: z.string().trim().min(2).max(160).optional(),
   country: z.string().trim().max(100).optional(),
+  languages: z.array(z.string().trim().max(80)).max(30).optional(),
   portfolioUrl: z.string().trim().url().max(2048).optional(),
   approvalStatus: z.enum(["pending", "approved", "rejected"]).optional(),
   verificationStatus: z.enum(["unverified", "verified"]).optional(),
@@ -231,7 +238,7 @@ export function permissionForResource(resource: AdminResource, operation: "read"
 export async function listAdminResource(resource: AdminResource, searchParams: URLSearchParams, actor: { id: string; role: UserRole }) {
   await connectToDatabase();
   const p = getListParams(searchParams);
-  const sortField = ["createdAt", "updatedAt", "followers", "engagementRate", "budget", "title", "companyName", "fullName", "amount", "occurredAt"].includes(p.sort) ? p.sort : "createdAt";
+  const sortField = ["createdAt", "updatedAt", "followers", "engagementRate", "averageReelViews", "budget", "title", "companyName", "fullName", "amount", "occurredAt"].includes(p.sort) ? p.sort : "createdAt";
   const sort = { [sortField]: p.order };
   const rx = p.q ? regex(p.q) : null;
   switch (resource) {
@@ -409,12 +416,22 @@ export async function updateAdminResource(resource: AdminResource, id: string, i
       const body = creatorAdminSchema.parse(input);
       const current = await Creator.findById(_id);
       if (!current) throw new ApiError("Creator not found.", 404);
+      // Auto-calculate engagement rate when avg likes/comments are provided
+      const updatedBody = { ...body } as typeof body & { engagementRate?: number };
+      if (!updatedBody.engagementRate && (updatedBody.averageLikes !== undefined || updatedBody.averageComments !== undefined)) {
+        const followers = updatedBody.followers ?? current.followers ?? 0;
+        const likes = updatedBody.averageLikes ?? current.averageLikes ?? 0;
+        const comments = updatedBody.averageComments ?? current.averageComments ?? 0;
+        if (followers > 0) {
+          updatedBody.engagementRate = parseFloat((((likes + comments) / followers) * 100).toFixed(2));
+        }
+      }
       updated = await Creator.findByIdAndUpdate(_id, {
         $set: {
-          ...body,
-          ...(body.metricsVerificationStatus === "verified" ? { metricsLastVerifiedAt: now } : {}),
+          ...updatedBody,
+          ...(updatedBody.metricsVerificationStatus === "verified" ? { metricsLastVerifiedAt: now } : {}),
         },
-        ...(body.metricsVerificationStatus === "unverified" ? { $unset: { metricsLastVerifiedAt: 1 } } : {}),
+        ...(updatedBody.metricsVerificationStatus === "unverified" ? { $unset: { metricsLastVerifiedAt: 1 } } : {}),
       }, { returnDocument: "after", runValidators: true, strict: "throw" }).lean();
       if (body.approvalStatus) action = `creator.${body.approvalStatus}`;
       else if (body.metricsVerificationStatus) action = `creator.metrics_${body.metricsVerificationStatus}`;
@@ -617,9 +634,24 @@ export async function createAdminResource(resource: AdminResource, input: unknow
         bio: z.string().trim().max(3000).optional(),
         instagramUsername: z.string().trim().max(64).optional(),
         youtubeChannel: z.string().trim().max(250).optional(),
+        profileImage: z.string().trim().max(2048).optional(),
+        languages: z.array(z.string().trim().max(80)).max(30).optional(),
+        averageLikes: z.number().int().min(0).optional(),
+        averageComments: z.number().int().min(0).optional(),
+        averageReelViews: z.number().int().min(0).optional(),
+        audienceLocation: z.string().trim().max(300).optional(),
+        collaborationTypes: z.array(z.string().trim().max(80)).max(20).optional(),
+        pastBrandCollaborations: z.array(z.string().trim().max(200)).max(100).optional(),
         approvalStatus: z.enum(["pending", "approved", "rejected"]).optional(),
       }).strict().parse(input);
-      created = await Creator.create(body);
+      // Auto-calculate engagement rate
+      const createBody: typeof body & { engagementRate?: number } = { ...body };
+      if (body.followers > 0 && (body.averageLikes !== undefined || body.averageComments !== undefined)) {
+        const likes = body.averageLikes ?? 0;
+        const comments = body.averageComments ?? 0;
+        createBody.engagementRate = parseFloat((((likes + comments) / body.followers) * 100).toFixed(2));
+      }
+      created = await Creator.create(createBody);
       break;
     }
     case "brands": {

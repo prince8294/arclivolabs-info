@@ -60,7 +60,7 @@ export default async function CreatorProfile({ params }: RouteContext) {
         platform: record.primaryPlatform,
         followers: formatFollowers(record.followers),
         location: record.location,
-        image: record.profileImage || "/images/creator-amara.jpg",
+        image: record.profileImage || "",
         bio: record.bio,
         isDemo: record.isDemo,
         verified: record.verificationStatus === "verified",
@@ -71,7 +71,12 @@ export default async function CreatorProfile({ params }: RouteContext) {
 
   return <>
     <section className="profile-hero section-pad">
-      <div className="profile-photo"><Image src={profile.image} alt={`${profile.name}${profile.isDemo ? ", illustrative demo profile" : ", creator profile"}`} fill sizes="(max-width: 760px) 90vw, 40vw" /><span>{profile.isDemo ? "DEMO PROFILE · ILLUSTRATIVE CONTENT" : profile.verified ? "VERIFIED CREATOR" : "APPROVED CREATOR PROFILE"}</span></div>
+      {profile.image ? (
+        <div className="profile-photo">
+          <Image src={profile.image} alt={`${profile.name}${profile.isDemo ? ", illustrative demo profile" : ", creator profile"}`} fill sizes="(max-width: 760px) 90vw, 40vw" />
+          <span>{profile.isDemo ? "DEMO PROFILE · ILLUSTRATIVE CONTENT" : profile.verified ? "VERIFIED CREATOR" : "APPROVED CREATOR PROFILE"}</span>
+        </div>
+      ) : null}
       <div className="profile-copy"><Link className="text-link" href="/creators"><ArrowLeft size={15} /> Back to creators</Link><span className="eyebrow">{profile.isDemo ? "ILLUSTRATIVE CREATOR PROFILE" : "APPROVED CREATOR PROFILE"}</span><h1>{profile.name}</h1><p className="profile-category">{profile.category} · {profile.location}</p><p>{profile.bio ?? (profile.isDemo ? "This sample profile demonstrates how creator details could be presented. Names, category, location, platform, audience, and imagery are illustrative placeholders only." : "This creator profile has been approved for public listing.")}</p><div className="profile-facts"><div><span>PRIMARY PLATFORM</span><b>{profile.platform}</b></div><div><span>{profile.isDemo ? "DEMO AUDIENCE" : "FOLLOWERS"}</span><b>{profile.followers}{profile.isDemo ? " · unverified" : ""}</b></div><div><span>LOCATION</span><b>{profile.location}</b></div></div><Link className="button button-dark" href="/contact">Enquire about a partnership <ArrowUpRight size={16} /></Link></div>
     </section>
     <CtaBand title={<>Looking for a voice<br /><em>of your own?</em></>} description="Tell us about your audience and campaign goals. We’ll shape a considered creator shortlist together." />

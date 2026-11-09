@@ -5,18 +5,143 @@ import {
   ArrowRight,
   ArrowUpRight,
   Check,
+  Eye,
+  Mail,
+  MapPin,
   Sparkles,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 import { creators, services } from "@/data/site-data";
-import { CreatorCard, ServiceIcon } from "@/components/site";
+import { ServiceIcon } from "@/components/site";
 import { CtaBand } from "@/components/cta-band";
 import { Reveal } from "@/components/reveal";
+import { connectToDatabase } from "@/lib/db";
+import Creator from "@/models/Creator";
 
-const creatorImages = [
-  "/images/creator-amara.jpg",
-  "/images/creator-noah.jpg",
-  "/images/creator-mina.jpg",
-];
+function formatFollowers(count: number): string {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (count >= 1000) return `${Math.round(count / 1000)}K`;
+  return String(count);
+}
+
+function formatViews(views: number | null | undefined): string {
+  if (views === null || views === undefined || views <= 0) return "N/A";
+  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (views >= 1000) return `${Math.round(views / 1000)}K`;
+  return String(views);
+}
+
+function HomeCreatorRow({ creator }: { creator: any }) {
+  const profileSlug = creator._id ? creator._id.toString() : creator.slug;
+  const category = (creator.contentCategories && creator.contentCategories[0]) || creator.category || "Creator";
+  const hasImage = Boolean(creator.profileImage && creator.profileImage.trim().length > 0);
+
+  let followersCount = 0;
+  if (typeof creator.followers === "number") {
+    followersCount = creator.followers;
+  } else if (typeof creator.followers === "string") {
+    const match = /^([\d.]+)\s*([KM]?)$/i.exec(creator.followers.replace(/,/g, ""));
+    if (match) {
+      const amount = Number.parseFloat(match[1]);
+      const mult = match[2].toUpperCase() === "M" ? 1_000_000 : match[2].toUpperCase() === "K" ? 1000 : 1;
+      followersCount = amount * mult;
+    }
+  }
+  const followersFormatted = formatFollowers(followersCount);
+
+  let engagementFormatted = "N/A";
+  if (creator.engagementRate) {
+    engagementFormatted = `${creator.engagementRate.toFixed(1)}%`;
+  } else if (followersCount > 0 && (creator.averageLikes || creator.averageComments)) {
+    const likes = creator.averageLikes || 0;
+    const comments = creator.averageComments || 0;
+    engagementFormatted = `${(((likes + comments) / followersCount) * 100).toFixed(1)}%`;
+  }
+
+  const viewsFormatted = creator.averageReelViews ? formatViews(creator.averageReelViews) : "N/A";
+  const displayName = creator.fullName || creator.name || "Creator";
+
+  return (
+    <article className="creator-row" aria-label={`Creator profile: ${displayName}`}>
+      {/* LEFT — identity */}
+      <div className="creator-row-left">
+        {hasImage && (
+          <div className="creator-row-avatar">
+            <Image
+              src={creator.profileImage}
+              alt={`${displayName}, creator profile`}
+              fill
+              sizes="72px"
+              className="creator-row-avatar-img"
+            />
+          </div>
+        )}
+        <div className="creator-row-identity">
+          <div className="creator-row-name-line">
+            <h3 className="creator-row-name">{displayName}</h3>
+          </div>
+          <div className="creator-row-subline">
+            {creator.instagramUsername && (
+              <span className="creator-row-handle">
+                {creator.instagramUsername.startsWith("@") ? creator.instagramUsername : `@${creator.instagramUsername}`}
+              </span>
+            )}
+            <span className="creator-row-category-badge">{category}</span>
+          </div>
+          <div className="creator-row-meta-tags">
+            {creator.location && (
+              <span className="creator-row-tag">
+                <MapPin size={11} />
+                {creator.location}
+              </span>
+            )}
+          </div>
+          {creator.bio && (
+            <p className="creator-row-bio">{creator.bio.length > 110 ? `${creator.bio.slice(0, 110)}…` : creator.bio}</p>
+          )}
+        </div>
+      </div>
+
+      {/* CENTER — stats */}
+      <div className="creator-row-stats">
+        <div className="creator-row-stat">
+          <div className="creator-row-stat-head">
+            <Users size={12} />
+            <span className="creator-row-stat-label">Followers</span>
+          </div>
+          <span className="creator-row-stat-value">{followersFormatted}</span>
+        </div>
+        <div className="creator-row-stat">
+          <div className="creator-row-stat-head">
+            <TrendingUp size={12} />
+            <span className="creator-row-stat-label">Engagement</span>
+          </div>
+          <span className="creator-row-stat-value">{engagementFormatted}</span>
+        </div>
+        <div className="creator-row-stat">
+          <div className="creator-row-stat-head">
+            <Eye size={12} />
+            <span className="creator-row-stat-label">Avg Views</span>
+          </div>
+          <span className="creator-row-stat-value">{viewsFormatted}</span>
+        </div>
+      </div>
+
+      {/* RIGHT — actions */}
+      <div className="creator-row-actions-col">
+        <Link className="creator-row-btn creator-row-btn-primary" href={`/creators/${profileSlug}`}>
+          View Profile <ArrowUpRight size={13} />
+        </Link>
+        <Link className="creator-row-btn creator-row-btn-secondary" href="/contact">
+          <Mail size={13} />
+          Contact Creator
+        </Link>
+        <span className="creator-row-platform-badge">{creator.primaryPlatform || "INSTAGRAM"}</span>
+      </div>
+    </article>
+  );
+}
 
 const process = [
   ["01", "Find the signal", "We get to know your audience, ambition, and the moment your brand wants to make."],
@@ -32,11 +157,20 @@ const capabilities = [
   "MEANINGFUL MEASUREMENT",
 ];
 
-export default function Home() {
-  const featuredCreator = creators.slice(0, 3).map((creator, index) => ({
-    ...creator,
-    image: creatorImages[index] ?? creator.image,
-  }));
+export default async function Home() {
+  let liveCreators: any[] = [];
+  try {
+    await connectToDatabase();
+    liveCreators = await Creator.find({ approvalStatus: "approved" })
+      .select("fullName primaryPlatform contentCategories followers location profileImage bio instagramUsername averageReelViews engagementRate averageLikes averageComments")
+      .sort({ featured: -1, createdAt: -1 })
+      .limit(3)
+      .lean();
+  } catch (error) {
+    console.error("Failed to load featured creators on home page:", error);
+  }
+
+  const creatorsToShow = liveCreators.length > 0 ? liveCreators : creators.slice(0, 3);
   return (
     <main className="home-page">
       <section className="home-hero">
@@ -218,14 +352,16 @@ export default function Home() {
             <Link className="home-text-link" href="/creators">Explore our creator directory <ArrowUpRight size={16} /></Link>
           </div>
         </Reveal>
-        <div className="home-creator-grid">
-          {featuredCreator.map((creator, index) => (
-            <div className={`home-creator-card home-creator-card-${index + 1}`} key={creator.slug}>
-              <CreatorCard creator={creator} />
-            </div>
+        <div className="creator-rows-list home-creator-rows">
+          {creatorsToShow.map((creator) => (
+            <HomeCreatorRow creator={creator} key={creator._id ? creator._id.toString() : creator.slug} />
           ))}
         </div>
-        <p className="home-art-disclaimer">Illustrative creator profiles and audience figures. Original creative production for Arclivo.</p>
+        <div className="home-creators-bottom-cta">
+          <Link className="button button-dark" href="/creators">
+            Explore All Creators <ArrowUpRight size={16} />
+          </Link>
+        </div>
       </section>
 
       <CtaBand

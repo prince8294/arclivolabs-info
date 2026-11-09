@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, CirclePlus, Download, ExternalLink, LoaderCircle, Pencil, Search, ShieldCheck, Trash2, UserPlus, X } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, CirclePlus, Download, ExternalLink, LoaderCircle, Pencil, Search, ShieldCheck, Trash2, Upload, UserPlus, X } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { UserRole } from "@/models/User";
 import { FinancePayoutsPanel } from "@/components/admin/finance-payouts";
@@ -19,7 +19,7 @@ function AdminModalPortal({ children }: { children: ReactNode }) {
 
 type AdminRecord = Record<string, unknown> & { _id?: string; id?: string };
 type Envelope<T> = { success: boolean; message: string; data?: T; errors?: Array<{ field?: string; message: string }> };
-type Field = { key: string; label: string; type?: "text" | "email" | "url" | "number" | "textarea" | "date" | "select" | "csv" | "boolean"; options?: string[]; required?: boolean; hint?: string };
+type Field = { key: string; label: string; type?: "text" | "email" | "url" | "number" | "textarea" | "date" | "select" | "csv" | "boolean" | "image"; options?: string[]; required?: boolean; hint?: string };
 
 const resourceForSection: Record<string, string> = {
   creators: "creators", brands: "brands", campaigns: "campaigns", enquiries: "enquiries",
@@ -34,11 +34,18 @@ const config: Record<string, { title: string; singular: string; description: str
     fields: [
       { key: "fullName", label: "Full name", required: true }, { key: "email", label: "Email", type: "email", required: true },
       { key: "phone", label: "Phone", required: true }, { key: "primaryPlatform", label: "Primary platform", required: true },
-      { key: "profileImage", label: "Cloudinary profile image URL", type: "url" },
+      { key: "profileImage", label: "Profile photo (Upload File)", type: "image", hint: "Choose an image file (JPG, PNG, WEBP, AVIF) from your device to upload directly to Cloudinary." },
       { key: "contentCategories", label: "Categories (comma separated)", type: "csv", required: true },
       { key: "followers", label: "Followers", type: "number", required: true }, { key: "location", label: "Location", required: true },
       { key: "instagramUsername", label: "Instagram username" }, { key: "youtubeChannel", label: "YouTube channel" },
       { key: "bio", label: "Creator bio", type: "textarea" },
+      { key: "languages", label: "Languages (comma separated)", type: "csv", hint: "e.g. English, Hindi, Tamil" },
+      { key: "averageLikes", label: "Average Likes", type: "number", hint: "Used to auto-calculate engagement rate" },
+      { key: "averageComments", label: "Average Comments", type: "number", hint: "Used to auto-calculate engagement rate" },
+      { key: "averageReelViews", label: "Average Reel Views", type: "number" },
+      { key: "audienceLocation", label: "Audience Location", hint: "e.g. 60% India, 20% UAE" },
+      { key: "collaborationTypes", label: "Collaboration Types (comma separated)", type: "csv", hint: "e.g. Reels, Stories, Posts, UGC" },
+      { key: "pastBrandCollaborations", label: "Past Brand Collaborations (comma separated)", type: "csv" },
     ], statuses: ["pending", "approved", "rejected"], create: true,
   },
   "creator-applications": {
@@ -216,6 +223,166 @@ function ReportChart({ name, value }: { name: string; value: unknown[] }) {
   </ResponsiveContainer></div>;
 }
 
+function AdminImageUploadField({
+  name,
+  label,
+  defaultValue,
+  hint,
+}: {
+  name: string;
+  label: string;
+  defaultValue?: string;
+  hint?: string;
+}) {
+  const [imageUrl, setImageUrl] = useState(defaultValue ?? "");
+  const [previewUrl, setPreviewUrl] = useState(defaultValue ?? "");
+  const [fileName, setFileName] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setImageUrl(defaultValue ?? "");
+    setPreviewUrl(defaultValue ?? "");
+    setUploadSuccess("");
+    setUploadError("");
+    setFileName("");
+  }, [defaultValue]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show immediate local preview
+    const localPreview = URL.createObjectURL(file);
+    setPreviewUrl(localPreview);
+    setFileName(file.name);
+    setUploading(true);
+    setUploadError("");
+    setUploadSuccess("");
+
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+
+      const res = await fetch("/api/admin/uploads", {
+        method: "POST",
+        body: fd,
+        credentials: "same-origin",
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to upload image to Cloudinary.");
+      }
+
+      setImageUrl(data.data.url);
+      setPreviewUrl(data.data.url);
+      setUploadSuccess("✓ Image uploaded to Cloudinary!");
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+      if (!imageUrl) {
+        setPreviewUrl("");
+        setFileName("");
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemove = () => {
+    setImageUrl("");
+    setPreviewUrl("");
+    setFileName("");
+    setUploadSuccess("");
+    setUploadError("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="admin-form-field admin-field-wide admin-image-field">
+      <span>{label}</span>
+      <div className="admin-image-upload-box">
+        {/* Preview Area */}
+        <div className="admin-image-preview-area">
+          {previewUrl ? (
+            <img src={previewUrl} alt="Creator preview" className="admin-image-preview-thumb" />
+          ) : (
+            <div className="admin-image-preview-empty">
+              <Camera size={26} />
+              <span>No image</span>
+            </div>
+          )}
+        </div>
+
+        {/* Upload Button & Actions */}
+        <div className="admin-image-upload-actions">
+          <div className="admin-image-btn-row">
+            <button
+              type="button"
+              className="admin-upload-trigger-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              <Upload size={14} />
+              <span>
+                {uploading
+                  ? "Uploading to Cloudinary…"
+                  : previewUrl
+                  ? "Change / Upload New Photo"
+                  : "Choose Image File"}
+              </span>
+            </button>
+
+            {previewUrl && (
+              <button
+                type="button"
+                className="admin-clear-image-btn"
+                onClick={handleRemove}
+                disabled={uploading}
+              >
+                <Trash2 size={13} /> Remove Photo
+              </button>
+            )}
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            onChange={handleFileChange}
+            disabled={uploading}
+            style={{ display: "none" }}
+          />
+
+          {/* Hidden input to pass the Cloudinary URL on form submit */}
+          <input type="hidden" name={name} value={imageUrl} />
+
+          {/* Feedback messages */}
+          {uploading && (
+            <p className="admin-upload-hint loading">
+              <LoaderCircle size={13} className="admin-spin" /> Uploading image to Cloudinary…
+            </p>
+          )}
+          {uploadSuccess && (
+            <p className="admin-upload-hint success">
+              {uploadSuccess} {fileName ? `(${fileName})` : ""}
+            </p>
+          )}
+          {uploadError && <p className="admin-upload-hint error">{uploadError}</p>}
+        </div>
+      </div>
+      {hint && <small>{hint}</small>}
+    </div>
+  );
+}
+
 export function AdminWorkspace({ section, role, recordId }: { section: string; role: UserRole; recordId?: string }) {
   const searchParams = useSearchParams();
   const initialResource = section === "creators" && searchParams.get("type") === "creator-applications" ? "creator-applications" : resourceForSection[section] ?? section;
@@ -303,6 +470,8 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
         if (field.type === "number") values[field.key] = Number(raw);
         else if (field.type === "csv") values[field.key] = String(raw).split(",").map((part) => part.trim()).filter(Boolean);
         else values[field.key] = raw;
+      } else if (field.key === "profileImage") {
+        values[field.key] = "";
       } else if (resource === "creator-applications" && ["email", "phone", "contentCategory", "followers", "location", "portfolioUrl", "introduction"].includes(field.key)) {
         values[field.key] = null;
       }
@@ -459,14 +628,26 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
     {modal && <AdminModalPortal><div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(false); }}>
       <form className="admin-modal" onSubmit={(event) => void submitForm(event)}>
         <div className="admin-modal-heading"><div><span className="admin-eyebrow">{formRecord ? "UPDATE RECORD" : "NEW RECORD"}</span><h2>{formRecord ? `Edit ${definition.singular}` : `Add ${definition.singular}`}</h2></div><button type="button" className="admin-icon-button" onClick={() => setModal(false)} aria-label="Close dialog"><X size={18} /></button></div>
-        <div className="admin-form-grid">{visibleFields.map((field) => <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}>
-          <span>{field.label}{field.required && !formRecord && <i> *</i>}</span>
-          {field.type === "textarea" ? <textarea name={field.key} defaultValue={String(formRecord?.[field.key] ?? "")} required={field.required && !formRecord} rows={4} />
-            : field.type === "select" ? <select name={field.key} defaultValue={String(formRecord?.[field.key] ?? field.options?.[0] ?? "")}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
-              : field.type === "boolean" ? <span className="admin-checkbox-row"><input type="checkbox" name={field.key} defaultChecked={Boolean(formRecord?.[field.key])} />Enabled</span>
-                : <input name={field.key} type={field.type === "csv" ? "text" : field.type ?? "text"} defaultValue={field.type === "csv" ? toCsv(formRecord?.[field.key]) : formatInputValue(field, formRecord?.[field.key])} required={field.required && !formRecord} min={field.type === "number" ? 0 : undefined} />}
-          {field.hint && <small>{field.hint}</small>}
-        </label>)}</div>
+        <div className="admin-form-grid">{visibleFields.map((field) => (
+          field.type === "image" ? (
+            <AdminImageUploadField
+              key={field.key}
+              name={field.key}
+              label={field.label}
+              defaultValue={String(formRecord?.[field.key] ?? "")}
+              hint={field.hint}
+            />
+          ) : (
+            <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}>
+              <span>{field.label}{field.required && !formRecord && <i> *</i>}</span>
+              {field.type === "textarea" ? <textarea name={field.key} defaultValue={String(formRecord?.[field.key] ?? "")} required={field.required && !formRecord} rows={4} />
+                : field.type === "select" ? <select name={field.key} defaultValue={String(formRecord?.[field.key] ?? field.options?.[0] ?? "")}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
+                  : field.type === "boolean" ? <span className="admin-checkbox-row"><input type="checkbox" name={field.key} defaultChecked={Boolean(formRecord?.[field.key])} />Enabled</span>
+                    : <input name={field.key} type={field.type === "csv" ? "text" : field.type ?? "text"} defaultValue={field.type === "csv" ? toCsv(formRecord?.[field.key]) : formatInputValue(field, formRecord?.[field.key])} required={field.required && !formRecord} min={field.type === "number" ? 0 : undefined} />}
+              {field.hint && <small>{field.hint}</small>}
+            </label>
+          )
+        ))}</div>
         {error && <p className="admin-form-error" role="alert">{error}</p>}
         <div className="admin-modal-actions"><button type="button" className="admin-button admin-button-secondary" onClick={() => setModal(false)}>Cancel</button><button type="submit" className="admin-button" disabled={saving}>{saving ? <><LoaderCircle size={15} className="admin-spin" />Saving…</> : formRecord ? "Save changes" : "Create record"}</button></div>
       </form>
@@ -528,18 +709,30 @@ function AdminRecordDetail({ section, resource, item, onEdit, definition, visibl
       <div className="admin-heading-actions">{canManage && definition.fields.length > 0 && <button className="admin-button admin-button-secondary" onClick={onEdit}><Pencil size={15} />Edit</button>}{canManage && !["team", "activity-logs", "settings", "transactions", "notifications"].includes(resource) && <button className="admin-button admin-button-danger" onClick={onDelete}><Trash2 size={15} />Delete</button>}</div>
     </div>
     {notice && <p className="admin-toast" role="status">{notice}</p>}{error && <p className="admin-inline-error" role="alert">{error}</p>}
-    <div className="admin-detail-grid"><article className="admin-panel admin-panel-padding"><h2>Record information</h2><dl className="admin-detail-list">{entries.map(([key, value]) => <div key={key}><dt>{label(key)}</dt><dd>{text(value)}</dd></div>)}</dl></article>
+    <div className="admin-detail-grid"><article className="admin-panel admin-panel-padding"><h2>Record information</h2><dl className="admin-detail-list">{entries.map(([key, value]) => <div key={key}><dt>{label(key)}</dt><dd>{key === "profileImage" && typeof value === "string" && value ? <div className="admin-detail-photo-wrapper"><img src={value} alt="Profile" className="admin-detail-photo-thumb" /></div> : text(value)}</dd></div>)}</dl></article>
       {entityType && <article className="admin-panel admin-panel-padding"><h2>Internal notes</h2><p className="admin-panel-description">Visible to authorized agency team members only.</p><div className="admin-note-list">{notes.map((note) => <div key={String(note._id)}><p>{text(note.body)}</p><small>{text((note.author as AdminRecord | undefined)?.name)} · {text(note.createdAt)}</small></div>)}{notes.length === 0 && !noteError && <p className="admin-muted">No internal notes yet.</p>}</div>{noteError && <p className="admin-form-error" role="alert">{noteError}</p>}{canManage && <form className="admin-note-form" onSubmit={(event) => void addNote(event)}><textarea value={noteBody} onChange={(event) => setNoteBody(event.target.value)} maxLength={5000} required placeholder="Add a private note…" /><button className="admin-button" disabled={!noteBody.trim()}>Add note</button></form>}</article>}
     </div>
     {resource === "creators" && <article className="admin-panel admin-panel-padding"><div className="admin-panel-heading"><div><h2>Campaign history</h2><p>Current and past campaigns featuring this creator</p></div></div><p className="admin-muted">Campaign assignments are available on campaign detail records.</p></article>}
     {modal && <AdminModalPortal><div className="admin-modal-backdrop"><form className="admin-modal" onSubmit={(event) => submitForm(event)}><div className="admin-modal-heading"><div><span className="admin-eyebrow">UPDATE RECORD</span><h2>Edit {definition.singular}</h2></div><button className="admin-icon-button" type="button" onClick={() => closeModal()} aria-label="Close dialog"><X size={18} /></button></div>
-      <div className="admin-form-grid">{visibleFields.map((field) => <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}><span>{field.label}</span>
-        {field.type === "textarea" ? <textarea name={field.key} defaultValue={String(formRecord?.[field.key] ?? "")} rows={4} />
-          : field.type === "select" ? <select name={field.key} defaultValue={String(formRecord?.[field.key] ?? field.options?.[0] ?? "")}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
-            : field.type === "boolean" ? <span className="admin-checkbox-row"><input type="checkbox" name={field.key} defaultChecked={Boolean(formRecord?.[field.key])} />Enabled</span>
-              : <input name={field.key} type={field.type === "csv" ? "text" : field.type ?? "text"} defaultValue={field.type === "csv" ? toCsv(formRecord?.[field.key]) : formatInputValue(field, formRecord?.[field.key])} min={field.type === "number" ? 0 : undefined} />}
-        {field.hint && <small>{field.hint}</small>}
-      </label>)}</div>{error && <p className="admin-form-error" role="alert">{error}</p>}
+      <div className="admin-form-grid">{visibleFields.map((field) => (
+        field.type === "image" ? (
+          <AdminImageUploadField
+            key={field.key}
+            name={field.key}
+            label={field.label}
+            defaultValue={String(formRecord?.[field.key] ?? "")}
+            hint={field.hint}
+          />
+        ) : (
+          <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}><span>{field.label}</span>
+            {field.type === "textarea" ? <textarea name={field.key} defaultValue={String(formRecord?.[field.key] ?? "")} rows={4} />
+              : field.type === "select" ? <select name={field.key} defaultValue={String(formRecord?.[field.key] ?? field.options?.[0] ?? "")}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
+                : field.type === "boolean" ? <span className="admin-checkbox-row"><input type="checkbox" name={field.key} defaultChecked={Boolean(formRecord?.[field.key])} />Enabled</span>
+                  : <input name={field.key} type={field.type === "csv" ? "text" : field.type ?? "text"} defaultValue={field.type === "csv" ? toCsv(formRecord?.[field.key]) : formatInputValue(field, formRecord?.[field.key])} min={field.type === "number" ? 0 : undefined} />}
+            {field.hint && <small>{field.hint}</small>}
+          </label>
+        )
+      ))}</div>{error && <p className="admin-form-error" role="alert">{error}</p>}
       <div className="admin-modal-actions"><button type="button" className="admin-button admin-button-secondary" onClick={() => closeModal()}>Cancel</button><button type="submit" className="admin-button" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div></form></div></AdminModalPortal>}
   </section>;
 }
