@@ -43,13 +43,7 @@ export const creatorAdminSchema = z.object({
   contentCategories: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
   followers: z.number().int().min(0).optional(),
   averageViews: z.number().int().min(0).optional(),
-  averageLikes: z.number().int().min(0).optional(),
-  averageComments: z.number().int().min(0).optional(),
-  averageReelViews: z.number().int().min(0).optional(),
   engagementRate: z.number().min(0).max(100).optional(),
-  audienceLocation: z.string().trim().max(300).optional(),
-  collaborationTypes: z.array(z.string().trim().max(80)).max(20).optional(),
-  pastBrandCollaborations: z.array(z.string().trim().max(200)).max(100).optional(),
   location: z.string().trim().min(2).max(160).optional(),
   country: z.string().trim().max(100).optional(),
   languages: z.array(z.string().trim().max(80)).max(30).optional(),
@@ -416,16 +410,7 @@ export async function updateAdminResource(resource: AdminResource, id: string, i
       const body = creatorAdminSchema.parse(input);
       const current = await Creator.findById(_id);
       if (!current) throw new ApiError("Creator not found.", 404);
-      // Auto-calculate engagement rate when avg likes/comments are provided
       const updatedBody = { ...body } as typeof body & { engagementRate?: number };
-      if (!updatedBody.engagementRate && (updatedBody.averageLikes !== undefined || updatedBody.averageComments !== undefined)) {
-        const followers = updatedBody.followers ?? current.followers ?? 0;
-        const likes = updatedBody.averageLikes ?? current.averageLikes ?? 0;
-        const comments = updatedBody.averageComments ?? current.averageComments ?? 0;
-        if (followers > 0) {
-          updatedBody.engagementRate = parseFloat((((likes + comments) / followers) * 100).toFixed(2));
-        }
-      }
       updated = await Creator.findByIdAndUpdate(_id, {
         $set: {
           ...updatedBody,
@@ -636,22 +621,9 @@ export async function createAdminResource(resource: AdminResource, input: unknow
         youtubeChannel: z.string().trim().max(250).optional(),
         profileImage: z.string().trim().max(2048).optional(),
         languages: z.array(z.string().trim().max(80)).max(30).optional(),
-        averageLikes: z.number().int().min(0).optional(),
-        averageComments: z.number().int().min(0).optional(),
-        averageReelViews: z.number().int().min(0).optional(),
-        audienceLocation: z.string().trim().max(300).optional(),
-        collaborationTypes: z.array(z.string().trim().max(80)).max(20).optional(),
-        pastBrandCollaborations: z.array(z.string().trim().max(200)).max(100).optional(),
         approvalStatus: z.enum(["pending", "approved", "rejected"]).optional(),
       }).strict().parse(input);
-      // Auto-calculate engagement rate
-      const createBody: typeof body & { engagementRate?: number } = { ...body };
-      if (body.followers > 0 && (body.averageLikes !== undefined || body.averageComments !== undefined)) {
-        const likes = body.averageLikes ?? 0;
-        const comments = body.averageComments ?? 0;
-        createBody.engagementRate = parseFloat((((likes + comments) / body.followers) * 100).toFixed(2));
-      }
-      created = await Creator.create(createBody);
+      created = await Creator.create(body);
       break;
     }
     case "brands": {

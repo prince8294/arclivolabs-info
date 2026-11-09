@@ -5,11 +5,9 @@ import {
   ArrowRight,
   ArrowUpRight,
   Check,
-  Eye,
   Mail,
   MapPin,
   Sparkles,
-  TrendingUp,
   Users,
 } from "lucide-react";
 import { creators, services } from "@/data/site-data";
@@ -23,13 +21,6 @@ function formatFollowers(count: number): string {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
   if (count >= 1000) return `${Math.round(count / 1000)}K`;
   return String(count);
-}
-
-function formatViews(views: number | null | undefined): string {
-  if (views === null || views === undefined || views <= 0) return "N/A";
-  if (views >= 1_000_000) return `${(views / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (views >= 1000) return `${Math.round(views / 1000)}K`;
-  return String(views);
 }
 
 function HomeCreatorRow({ creator }: { creator: any }) {
@@ -49,17 +40,6 @@ function HomeCreatorRow({ creator }: { creator: any }) {
     }
   }
   const followersFormatted = formatFollowers(followersCount);
-
-  let engagementFormatted = "N/A";
-  if (creator.engagementRate) {
-    engagementFormatted = `${creator.engagementRate.toFixed(1)}%`;
-  } else if (followersCount > 0 && (creator.averageLikes || creator.averageComments)) {
-    const likes = creator.averageLikes || 0;
-    const comments = creator.averageComments || 0;
-    engagementFormatted = `${(((likes + comments) / followersCount) * 100).toFixed(1)}%`;
-  }
-
-  const viewsFormatted = creator.averageReelViews ? formatViews(creator.averageReelViews) : "N/A";
   const displayName = creator.fullName || creator.name || "Creator";
 
   return (
@@ -112,20 +92,6 @@ function HomeCreatorRow({ creator }: { creator: any }) {
           </div>
           <span className="creator-row-stat-value">{followersFormatted}</span>
         </div>
-        <div className="creator-row-stat">
-          <div className="creator-row-stat-head">
-            <TrendingUp size={12} />
-            <span className="creator-row-stat-label">Engagement</span>
-          </div>
-          <span className="creator-row-stat-value">{engagementFormatted}</span>
-        </div>
-        <div className="creator-row-stat">
-          <div className="creator-row-stat-head">
-            <Eye size={12} />
-            <span className="creator-row-stat-label">Avg Views</span>
-          </div>
-          <span className="creator-row-stat-value">{viewsFormatted}</span>
-        </div>
       </div>
 
       {/* RIGHT — actions */}
@@ -162,7 +128,7 @@ export default async function Home() {
   try {
     await connectToDatabase();
     liveCreators = await Creator.find({ approvalStatus: "approved" })
-      .select("fullName primaryPlatform contentCategories followers location profileImage bio instagramUsername averageReelViews engagementRate averageLikes averageComments")
+      .select("fullName primaryPlatform contentCategories followers location profileImage bio instagramUsername averageViews")
       .sort({ featured: -1, createdAt: -1 })
       .limit(3)
       .lean();

@@ -30,7 +30,7 @@ const resourceForSection: Record<string, string> = {
 const config: Record<string, { title: string; singular: string; description: string; columns: Array<[string, string]>; fields: Field[]; statuses?: string[]; create?: boolean }> = {
   creators: {
     title: "Creator network", singular: "creator", description: "Review creator profiles, applications, availability, and verification.",
-    columns: [["fullName", "Creator"], ["primaryPlatform", "Platform"], ["contentCategories", "Categories"], ["followers", "Followers"], ["location", "Location"], ["engagementRate", "Engagement"], ["metricsVerificationStatus", "Metrics"], ["approvalStatus", "Approval"]],
+    columns: [["fullName", "Creator"], ["primaryPlatform", "Platform"], ["contentCategories", "Categories"], ["followers", "Followers"], ["location", "Location"], ["metricsVerificationStatus", "Metrics"], ["approvalStatus", "Approval"]],
     fields: [
       { key: "fullName", label: "Full name", required: true }, { key: "email", label: "Email", type: "email", required: true },
       { key: "phone", label: "Phone", required: true }, { key: "primaryPlatform", label: "Primary platform", required: true },
@@ -38,14 +38,9 @@ const config: Record<string, { title: string; singular: string; description: str
       { key: "contentCategories", label: "Categories (comma separated)", type: "csv", required: true },
       { key: "followers", label: "Followers", type: "number", required: true }, { key: "location", label: "Location", required: true },
       { key: "instagramUsername", label: "Instagram username" }, { key: "youtubeChannel", label: "YouTube channel" },
-      { key: "bio", label: "Creator bio", type: "textarea" },
+      { key: "bio", label: "About creator", type: "textarea" },
       { key: "languages", label: "Languages (comma separated)", type: "csv", hint: "e.g. English, Hindi, Tamil" },
-      { key: "averageLikes", label: "Average Likes", type: "number", hint: "Used to auto-calculate engagement rate" },
-      { key: "averageComments", label: "Average Comments", type: "number", hint: "Used to auto-calculate engagement rate" },
-      { key: "averageReelViews", label: "Average Reel Views", type: "number" },
-      { key: "audienceLocation", label: "Audience Location", hint: "e.g. 60% India, 20% UAE" },
-      { key: "collaborationTypes", label: "Collaboration Types (comma separated)", type: "csv", hint: "e.g. Reels, Stories, Posts, UGC" },
-      { key: "pastBrandCollaborations", label: "Past Brand Collaborations (comma separated)", type: "csv" },
+
     ], statuses: ["pending", "approved", "rejected"], create: true,
   },
   "creator-applications": {
@@ -594,6 +589,7 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
     <div className="admin-toolbar">
       <label className="admin-search"><Search size={16} /><input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder={`Search ${definition.title.toLowerCase()}…`} aria-label={`Search ${definition.title}`} /></label>
       {definition.statuses && <label className="admin-filter-control"><span>Status</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="">All statuses</option>{definition.statuses.map((value) => <option value={value} key={value}>{label(value)}</option>)}</select></label>}
+      {resource === "creators" && <button className="admin-button admin-button-secondary" onClick={() => { const q = new URLSearchParams(); if (search.trim()) q.set("q", search.trim()); if (status) q.set("status", status); window.open(`/api/admin/creators/export?${q}`, "_blank"); }}><Download size={15} /> Export CSV</button>}
       {resource === "enquiries" && <button className="admin-button admin-button-secondary" onClick={() => window.open("/api/admin/enquiries/export", "_blank")}><Download size={15} /> Export CSV</button>}
       {resource === "transactions" && <span className="admin-filter-note">Financial access is permission-controlled.</span>}
     </div>

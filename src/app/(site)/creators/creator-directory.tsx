@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, MapPin, Globe, Users, TrendingUp, Eye, Mail, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight, MapPin, Globe, Users, Mail, ChevronLeft, ChevronRight } from "lucide-react";
 import { BrandLoader } from "@/components/brand-loader";
 import { creators as demoCreators, type Creator } from "@/data/site-data";
 
@@ -27,8 +27,6 @@ type DirectoryCreator = {
   instagramUsername?: string;
   bio?: string;
   languages?: string[];
-  engagementRate?: number | null;
-  averageReelViews?: number | null;
 };
 
 type DirectoryResponse = {
@@ -50,18 +48,6 @@ function formatFollowers(count: number): string {
   return String(count);
 }
 
-function formatViews(count: number | null | undefined): string {
-  if (count === null || count === undefined || count === 0) return "N/A";
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-  if (count >= 1000) return `${Math.round(count / 1000)}K`;
-  return String(count);
-}
-
-function formatEngagement(rate: number | null | undefined): string {
-  if (rate === null || rate === undefined || rate === 0) return "N/A";
-  return `${rate.toFixed(2)}%`;
-}
-
 function toLiveCreator(record: DirectoryCreator): DirectoryCreator {
   return record;
 }
@@ -79,8 +65,6 @@ function demoToDirectoryCreator(demo: Creator): DirectoryCreator {
     instagramUsername: undefined,
     bio: undefined,
     languages: [],
-    engagementRate: null,
-    averageReelViews: null,
   };
 }
 
@@ -161,20 +145,6 @@ function CreatorRow({ creator }: { creator: DirectoryCreator }) {
           <span className="creator-row-stat-value">
             {formatFollowers(creator.followers)}
           </span>
-        </div>
-        <div className="creator-row-stat">
-          <div className="creator-row-stat-head">
-            <TrendingUp size={12} />
-            <span className="creator-row-stat-label">Engagement</span>
-          </div>
-          <span className="creator-row-stat-value">{formatEngagement(creator.engagementRate)}</span>
-        </div>
-        <div className="creator-row-stat">
-          <div className="creator-row-stat-head">
-            <Eye size={12} />
-            <span className="creator-row-stat-label">Avg Views</span>
-          </div>
-          <span className="creator-row-stat-value">{formatViews(creator.averageReelViews)}</span>
         </div>
       </div>
 

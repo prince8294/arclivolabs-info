@@ -30,7 +30,7 @@ export const GET = withApiErrors(async (request) => {
 
   const [profiles, total] = await Promise.all([
     Creator.find(filters)
-      .select("fullName primaryPlatform contentCategories followers location profileImage featured isDemo instagramUsername bio languages engagementRate averageReelViews averageLikes averageComments")
+      .select("fullName primaryPlatform contentCategories followers location profileImage featured isDemo instagramUsername bio languages engagementRate averageViews")
       .sort(sort)
       .skip((query.page - 1) * query.limit)
       .limit(query.limit)
@@ -38,32 +38,22 @@ export const GET = withApiErrors(async (request) => {
     Creator.countDocuments(filters),
   ]);
   return apiSuccess({
-    creators: profiles.map((creator) => {
-      // Calculate engagement rate if not stored: ((avgLikes + avgComments) / followers) * 100
-      const storedEng = creator.engagementRate ?? 0;
-      let computedEng: number | null = null;
-      if (!storedEng && creator.followers > 0 && (creator.averageLikes !== undefined || creator.averageComments !== undefined)) {
-        const likes = creator.averageLikes ?? 0;
-        const comments = creator.averageComments ?? 0;
-        computedEng = ((likes + comments) / creator.followers) * 100;
-      }
-      return {
-        id: creator._id.toString(),
-        fullName: creator.fullName,
-        primaryPlatform: creator.primaryPlatform,
-        contentCategories: creator.contentCategories,
-        followers: creator.followers,
-        location: creator.location,
-        profileImage: creator.profileImage,
-        featured: creator.featured,
-        isDemo: creator.isDemo,
-        instagramUsername: creator.instagramUsername,
-        bio: creator.bio,
-        languages: creator.languages ?? [],
-        engagementRate: storedEng || computedEng,
-        averageReelViews: creator.averageReelViews ?? creator.averageViews ?? null,
-      };
-    }),
+    creators: profiles.map((creator) => ({
+      id: creator._id.toString(),
+      fullName: creator.fullName,
+      primaryPlatform: creator.primaryPlatform,
+      contentCategories: creator.contentCategories,
+      followers: creator.followers,
+      location: creator.location,
+      profileImage: creator.profileImage,
+      featured: creator.featured,
+      isDemo: creator.isDemo,
+      instagramUsername: creator.instagramUsername,
+      bio: creator.bio,
+      languages: creator.languages ?? [],
+      engagementRate: creator.engagementRate ?? null,
+      averageReelViews: creator.averageViews ?? null,
+    })),
     pagination: { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) },
   });
 });
