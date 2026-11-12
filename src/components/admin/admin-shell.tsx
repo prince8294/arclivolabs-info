@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Activity, BarChart3, Bell, BriefcaseBusiness, Building2, ChevronDown, FileText,
-  Handshake, LayoutDashboard, LogOut, Menu, MessageSquareText, Settings, Shield,
+  GraduationCap, Handshake, LayoutDashboard, LogOut, Menu, MessageSquareText, Settings, Shield,
   UserRound, Users, type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/models/User";
@@ -16,6 +16,7 @@ const navigation: NavigationItem[] = [
   { label: "Creators", href: "/admin/creators", icon: Users, permission: "creator:read", group: "Network" },
   { label: "Brands", href: "/admin/brands", icon: Building2, permission: "brand:read", group: "Network" },
   { label: "Campaigns", href: "/admin/campaigns", icon: BriefcaseBusiness, permission: "campaign:read", group: "Network" },
+  { label: "Student Management", href: "/admin/students", icon: GraduationCap, permission: "student:read", group: "Network" },
   { label: "Enquiries", href: "/admin/enquiries", icon: Handshake, permission: "enquiry:read", group: "Network" },
   { label: "Contact inbox", href: "/admin/contact-messages", icon: MessageSquareText, permission: "contact:read", group: "Network" },
   { label: "Team", href: "/admin/team", icon: Shield, permission: "team:read", group: "Network" },
@@ -41,6 +42,7 @@ const roleLabels: Record<UserRole, string> = {
   finance_manager: "Finance Manager",
   brand: "Brand",
   creator: "Creator",
+  student: "Student",
 };
 
 function canSeeItem(role: UserRole, permission: string): boolean {
@@ -48,13 +50,14 @@ function canSeeItem(role: UserRole, permission: string): boolean {
   const allowed: Record<UserRole, readonly string[]> = {
     super_admin: [],
     admin: navigation.filter((item) => item.permission !== "finance:read" && item.permission !== "finance:manage" && item.permission !== "settings:manage").map((item) => item.permission),
-    manager: ["dashboard:view", "creator:read", "brand:read", "campaign:read", "enquiry:read", "contact:read", "content:read", "analytics:read", "notification:read", "activity:read"],
+    manager: ["dashboard:view", "creator:read", "brand:read", "campaign:read", "enquiry:read", "contact:read", "content:read", "analytics:read", "notification:read", "activity:read", "student:read"],
     campaign_manager: ["dashboard:view", "creator:read", "brand:read", "campaign:read", "analytics:read", "notification:read"],
     creator_manager: ["dashboard:view", "creator:read", "notification:read"],
     sales_executive: ["dashboard:view", "brand:read", "enquiry:read", "contact:read", "notification:read"],
     finance_manager: ["dashboard:view", "campaign:read", "analytics:read"],
     brand: [],
     creator: [],
+    student: [],
   };
   return allowed[role].includes(permission);
 }

@@ -31,6 +31,7 @@ export const creatorApplicationSchema = z.object({
   platform: z.enum(["Instagram", "TikTok", "YouTube", "Other"]),
   followers: z.coerce.number().int().min(0).max(1_000_000_000),
   website: z.string().max(0).optional(),
+  referralCode: z.string().trim().max(50).optional(),
 }).strict().refine((value) => Boolean(value.email || value.phone), {
   path: ["email"],
   message: "Add an email address or phone number so our team can contact you.",

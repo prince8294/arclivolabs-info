@@ -7,6 +7,9 @@ import { readJson, validateMutationOrigin } from "@/lib/request";
 import { creatorApplicationSchema } from "@/lib/validations/public";
 import Creator from "@/models/Creator";
 import CreatorApplication from "@/models/CreatorApplication";
+import Student from "@/models/Student";
+import StudentReferral from "@/models/StudentReferral";
+import { normalizeInstagramHandle } from "@/lib/commission";
 import { recordCommittedActivity } from "@/services/activity.service";
 import { notifyAdminUsers } from "@/services/notification.service";
 
@@ -26,9 +29,21 @@ export const POST = withApiErrors(async (request) => {
   }
   const email = body.email ?? (session?.user?.role === "creator" ? session.user.email?.toLowerCase() : undefined);
 
+  const instagramHandle = body.platform === "Instagram" ? normalizeInstagramHandle(body.socialProfile) : normalizeUsername(body.socialProfile);
+
+  // Check duplicate across StudentReferral to enforce:
+  // "One Instagram account can only be attributed to one student.
+  // Prevent duplicate commission for the same creator."
+  if (body.platform === "Instagram" && instagramHandle) {
+    const existingReferral = await StudentReferral.findOne({ creatorHandle: instagramHandle });
+    if (existingReferral) {
+      throw new ApiError("This Instagram account has already been registered or attributed to an ambassador.", 409);
+    }
+  }
+
   const socialChecks = [
     { socialProfile: body.socialProfile.trim().toLowerCase() },
-    ...(body.platform === "Instagram" ? [{ instagramUsername: normalizeUsername(body.socialProfile) }] : []),
+    ...(body.platform === "Instagram" ? [{ instagramUsername: instagramHandle }] : []),
     ...(body.platform === "YouTube" ? [{ youtubeChannel: normalizeUsername(body.socialProfile) }] : []),
   ];
   const duplicate = await CreatorApplication.exists({
@@ -36,7 +51,7 @@ export const POST = withApiErrors(async (request) => {
   });
   const creatorChecks = [
     ...(email ? [{ email }] : []),
-    ...(body.platform === "Instagram" ? [{ instagramUsername: normalizeUsername(body.socialProfile) }] : []),
+    ...(body.platform === "Instagram" ? [{ instagramUsername: instagramHandle }] : []),
     ...(body.platform === "YouTube" ? [{ youtubeChannel: normalizeUsername(body.socialProfile) }] : []),
     ...(!["Instagram", "YouTube"].includes(body.platform)
       ? [{ otherSocialPlatforms: { $elemMatch: { platform: body.platform, username: normalizeUsername(body.socialProfile) } } }]
@@ -53,12 +68,38 @@ export const POST = withApiErrors(async (request) => {
     email,
     phone: body.phone,
     socialProfile: body.socialProfile.trim().toLowerCase(),
-    ...(body.platform === "Instagram" ? { instagramUsername: normalizeUsername(body.socialProfile) } : {}),
+    ...(body.platform === "Instagram" ? { instagramUsername: instagramHandle } : {}),
     ...(body.platform === "YouTube" ? { youtubeChannel: normalizeUsername(body.socialProfile) } : {}),
     primaryPlatform: body.platform,
     followers: body.followers,
     user: session?.user?.id,
   });
+
+  // If referred by a student ambassador, record the referral permanently
+  if (body.referralCode) {
+    const cleanReferralCode = body.referralCode.trim().toUpperCase();
+    const student = await Student.findOne({ referralCode: cleanReferralCode });
+    if (student && student.status === "active") {
+      await StudentReferral.create({
+        student: student._id,
+        referralCode: student.referralCode,
+        creatorName: body.name,
+        creatorHandle: instagramHandle,
+        platform: body.platform,
+        category: "General",
+        followers: body.followers,
+        status: "pending",
+        registrationDate: new Date(),
+        creatorApplication: application._id,
+      });
+
+      // Update student referral counters
+      student.totalCreatorsReferred = (student.totalCreatorsReferred || 0) + 1;
+      student.pendingVerification = (student.pendingVerification || 0) + 1;
+      await student.save();
+    }
+  }
+
   await recordCommittedActivity({
     actorId: session?.user?.id,
     action: "creator.application_submitted",

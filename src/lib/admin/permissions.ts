@@ -11,7 +11,7 @@ const permissionsByRole: Record<UserRole, readonly AdminPermission[]> = {
   manager: [
     "dashboard:view", "creator:read", "creator:manage", "brand:read", "campaign:read", "campaign:manage",
     "enquiry:read", "enquiry:manage", "contact:read", "contact:manage", "content:read", "content:manage",
-    "analytics:read", "notification:read", "activity:read",
+    "analytics:read", "notification:read", "activity:read", "student:read", "student:manage",
   ],
   campaign_manager: ["dashboard:view", "creator:read", "brand:read", "campaign:read", "campaign:manage", "analytics:read", "notification:read"],
   creator_manager: ["dashboard:view", "creator:read", "creator:manage", "campaign:read", "notification:read"],
@@ -19,6 +19,7 @@ const permissionsByRole: Record<UserRole, readonly AdminPermission[]> = {
   finance_manager: ["dashboard:view", "campaign:read", "analytics:read", "finance:read", "finance:manage"],
   brand: [],
   creator: [],
+  student: [],
 };
 
 export function roleHasPermission(role: UserRole, permission: AdminPermission, overrides?: readonly string[]): boolean {
@@ -48,6 +49,6 @@ export async function requireAdminRole() {
 }
 
 export function canAssignRole(actor: UserRole, target: UserRole): boolean {
-  if (target === "super_admin" || target === "brand" || target === "creator") return false;
+  if (target === "super_admin" || target === "brand" || target === "creator" || target === "student") return false;
   return actor === "super_admin" || (actor === "admin" && target !== "admin");
 }

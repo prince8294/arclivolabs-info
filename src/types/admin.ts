@@ -21,6 +21,8 @@ export const adminPermissions = [
   "activity:read",
   "settings:read",
   "settings:manage",
+  "student:read",
+  "student:manage",
 ] as const;
 
 export type AdminPermission = typeof adminPermissions[number];

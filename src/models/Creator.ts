@@ -41,6 +41,7 @@ const creatorSchema = new Schema(
     metricsVerificationStatus: { type: String, enum: ["unverified", "pending", "verified"], default: "unverified" },
     metricsVerificationRequestedAt: { type: Date },
     metricsLastVerifiedAt: { type: Date },
+    lastFollowersSyncedAt: { type: Date },
     approvalStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     featured: { type: Boolean, default: false },
     isDemo: { type: Boolean, default: false },

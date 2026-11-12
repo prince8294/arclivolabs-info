@@ -27,7 +27,7 @@ export const adminResources = [
   "services", "blogs", "notifications", "activity-logs", "settings", "transactions",
 ] as const;
 export type AdminResource = typeof adminResources[number];
-const manageableTeamRoles = userRoles.filter((role) => !["super_admin", "brand", "creator"].includes(role)) as [UserRole, ...UserRole[]];
+const manageableTeamRoles = userRoles.filter((role) => !["super_admin", "brand", "creator", "student"].includes(role)) as [UserRole, ...UserRole[]];
 
 export const creatorAdminSchema = z.object({
   fullName: z.string().trim().min(2).max(120).optional(),
@@ -291,7 +291,7 @@ export async function listAdminResource(resource: AdminResource, searchParams: U
       return pageResult(items, total, p);
     }
     case "team": {
-      const roles = userRoles.filter((role) => !["brand", "creator"].includes(role));
+      const roles = userRoles.filter((role) => !["brand", "creator", "student"].includes(role));
       const filter = { role: { $in: roles }, ...(p.status ? { status: p.status } : {}), ...(rx ? { $or: [{ name: rx }, { email: rx }, { role: rx }] } : {}) };
       const [items, total] = await Promise.all([User.find(filter).select("-passwordHash -sessionVersion").sort(sort).skip(p.skip).limit(p.limit).lean(), User.countDocuments(filter)]);
       const invites = await TeamInvitation.find({ acceptedAt: null, revokedAt: null, expiresAt: { $gt: new Date() } }).select("email name role expiresAt createdAt").sort({ createdAt: -1 }).limit(50).lean();
@@ -371,7 +371,7 @@ export async function getAdminResource(resource: AdminResource, id: string, acto
     case "campaigns": return Campaign.findById(_id).populate("brand").populate("selectedCreators").populate("createdBy", "name").lean();
     case "enquiries": return Enquiry.findOne({ _id, ...(actor.role === "sales_executive" ? { assignedTo: idOrThrow(actor.id) } : {}) }).populate("assignedTo", "name email").lean();
     case "contact-messages": return ContactMessage.findById(_id).lean();
-    case "team": return User.findOne({ _id, role: { $nin: ["brand", "creator"] } }).select("-passwordHash -sessionVersion").lean();
+    case "team": return User.findOne({ _id, role: { $nin: ["brand", "creator", "student"] } }).select("-passwordHash -sessionVersion").lean();
     case "services": return Service.findById(_id).lean();
     case "blogs": return BlogPost.findById(_id).populate("author", "name").lean();
     case "notifications": return Notification.findOne({ _id, recipient: idOrThrow(actor.id) }).lean();
@@ -537,7 +537,7 @@ export async function updateAdminResource(resource: AdminResource, id: string, i
         permissions: z.array(z.enum(adminPermissions)).max(adminPermissions.length).optional(),
       }).strict().refine((value) => value.status !== undefined || value.role !== undefined || value.permissions !== undefined, "Provide at least one team change.").parse(input);
       const target = await User.findById(_id);
-      if (!target || ["brand", "creator"].includes(target.role)) throw new ApiError("Team member not found.", 404);
+      if (!target || ["brand", "creator", "student"].includes(target.role)) throw new ApiError("Team member not found.", 404);
       if (target.role === "super_admin" && actor.role !== "super_admin") throw new ApiError("Only a super admin may manage a super admin.", 403);
       if (target.id === actor.id && body.status !== "active") throw new ApiError("You cannot deactivate your own account.", 400);
       if (body.role === "admin" && actor.role !== "super_admin") throw new ApiError("Only a super admin may assign the admin role.", 403);
@@ -703,7 +703,7 @@ export async function deleteAdminResource(resource: AdminResource, id: string, a
     case "notifications": deleted = await Notification.findOneAndDelete({ _id, recipient: idOrThrow(actor.id) }).select("_id"); break;
     case "team": {
       const target = await User.findById(_id);
-      if (!target || ["brand", "creator"].includes(target.role)) break;
+      if (!target || ["brand", "creator", "student"].includes(target.role)) break;
       if (target.role === "super_admin" && actor.role !== "super_admin") throw new ApiError("Only a super admin may revoke a super admin.", 403);
       if (target.id === actor.id) throw new ApiError("You cannot revoke your own access.", 400);
       target.status = "deactivated";

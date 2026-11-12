@@ -29,6 +29,7 @@ const creatorSchema = z.object({
   platform: z.enum(["Instagram", "TikTok", "YouTube", "Other"], { error: "Choose your primary platform." }),
   followers: z.string().regex(/^[\d,]+$/, "Enter your follower or subscriber count."),
   website: z.string().max(0),
+  referralCode: z.string().trim().optional(),
 }).refine((value) => Boolean(value.email || value.phone), {
   path: ["email"],
   message: "Add an email address or phone number so our team can contact you.",
@@ -150,9 +151,32 @@ export function ContactForm() {
   </form>;
 }
 
-export function CreatorForm() {
+export function CreatorForm({ initialReferralCode }: { initialReferralCode?: string } = {}) {
   const [notice, setNotice] = useState({ error: "", success: "" });
   const [reference, setReference] = useState("");
+  const [activeReferralCode, setActiveReferralCode] = useState(initialReferralCode || "");
+
+  useEffect(() => {
+    let code = initialReferralCode?.trim() || "";
+    if (!code && typeof window !== "undefined") {
+      const searchRef = new URLSearchParams(window.location.search).get("ref");
+      if (searchRef) {
+        code = searchRef.trim();
+      } else {
+        const match = document.cookie.match(/(?:^|;\s*)arclivo_creator_referral=([^;]+)/);
+        if (match && match[1]) {
+          code = decodeURIComponent(match[1]).trim();
+        }
+      }
+    }
+    if (code) {
+      setActiveReferralCode(code.toUpperCase());
+      if (typeof document !== "undefined") {
+        document.cookie = `arclivo_creator_referral=${encodeURIComponent(code.toUpperCase())}; path=/; max-age=2592000; SameSite=Lax`;
+      }
+    }
+  }, [initialReferralCode]);
+
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<CreatorValues>({
     resolver: zodResolver(creatorSchema),
     defaultValues: { website: "", email: "", phone: "" },
@@ -165,6 +189,7 @@ export function CreatorForm() {
         email: values.email || undefined,
         phone: values.phone || undefined,
         followers: Number(followers.replace(/,/g, "")),
+        referralCode: activeReferralCode || values.referralCode || undefined,
       });
       setReference(typeof result.data?.referenceId === "string" ? result.data.referenceId : "");
       setNotice({ error: "", success: result.message });
@@ -203,7 +228,17 @@ export function CreatorForm() {
       onSubmit={submit}
       noValidate
     >
-    <div className="form-heading"><span className="eyebrow">CREATOR APPLICATION</span><h2>Let’s get to know you.</h2><p>Share five quick details. We will contact you for anything else. We do not send email confirmations in this phase.</p></div>
+    <div className="form-heading">
+      <span className="eyebrow">CREATOR APPLICATION</span>
+      <h2>Let’s get to know you.</h2>
+      <p>Share five quick details. We will contact you for anything else. We do not send email confirmations in this phase.</p>
+    </div>
+    {activeReferralCode && (
+      <div style={{ marginBottom: "16px", padding: "8px 12px", background: "#f3effc", border: "1px solid #dcd1f9", borderRadius: "8px", fontSize: "12px", color: "#6247bf", display: "flex", alignItems: "center", gap: "6px" }}>
+        <span>✓</span>
+        <span>Ambassador Referral Applied: <strong>{activeReferralCode}</strong></span>
+      </div>
+    )}
     <div className="form-grid">
       <label className="form-field">Full name<input {...register("name")} autoComplete="name" /><FieldError>{errors.name?.message}</FieldError></label>
       <label className="form-field">Email (or phone below)<input {...register("email")} type="email" autoComplete="email" /><FieldError>{errors.email?.message}</FieldError></label>

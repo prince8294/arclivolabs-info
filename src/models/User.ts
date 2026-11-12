@@ -11,6 +11,7 @@ export const userRoles = [
   "finance_manager",
   "brand",
   "creator",
+  "student",
 ] as const;
 export type UserRole = typeof userRoles[number];
 export const accountStatuses = ["active", "pending", "suspended", "deactivated"] as const;

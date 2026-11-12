@@ -18,6 +18,7 @@ const adminRoles: readonly UserRole[] = [
 ];
 
 export function landingPathForRole(role: UserRole): string {
+  if (role === "student") return "/student/overview";
   return adminRoles.includes(role) ? "/admin/dashboard" : "/";
 }
 

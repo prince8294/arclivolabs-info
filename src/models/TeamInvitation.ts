@@ -1,7 +1,7 @@
 import { model, models, Schema, type InferSchemaType, type Types } from "mongoose";
 import { userRoles } from "@/models/User";
 
-const invitationRoles = userRoles.filter((role) => role !== "super_admin" && role !== "brand" && role !== "creator");
+const invitationRoles = userRoles.filter((role) => role !== "super_admin" && role !== "brand" && role !== "creator" && role !== "student");
 
 const teamInvitationSchema = new Schema(
   {

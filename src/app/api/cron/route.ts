@@ -5,6 +5,7 @@ import CampaignInvitation from "@/models/CampaignInvitation";
 import EmailOutbox from "@/models/EmailOutbox";
 import ScheduledJobRun from "@/models/ScheduledJobRun";
 import { dispatchPendingEmails } from "@/services/email.service";
+import { runDailyInstagramSync } from "@/services/instagram-sync.service";
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -56,14 +57,16 @@ export const GET = withApiErrors(async (request) => {
       { $set: { status: "expired" } },
     );
     const emailDispatch = await dispatchPendingEmails();
+    const instagramSync = await runDailyInstagramSync();
     const pendingEmails = await EmailOutbox.countDocuments({ status: { $in: ["pending", "failed", "blocked"] } });
     claimed.status = "succeeded";
     claimed.completedAt = new Date();
-    claimed.processedCount = expired.modifiedCount + emailDispatch.sent;
+    claimed.processedCount = expired.modifiedCount + emailDispatch.sent + (instagramSync.summary?.updatedCount || 0);
     await claimed.save();
     return apiSuccess({
       invitationExpiry: { expired: expired.modifiedCount },
       emailDispatch,
+      instagramSync,
       pendingEmailCount: pendingEmails,
     });
   } catch (error) {

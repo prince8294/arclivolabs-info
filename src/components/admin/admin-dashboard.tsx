@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight, BriefcaseBusiness, Building2,
   CircleDollarSign, Handshake, Users, UserRoundCheck,
+  RotateCw, X,
 } from "lucide-react";
 import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
@@ -60,10 +61,41 @@ function comparisonLabel(change: number | null) {
   return `${Math.abs(change)}% vs previous month`;
 }
 
+type SyncInfo = {
+  lastSyncAt: string | null;
+  lastSyncStatus: "succeeded" | "failed" | "processing" | "never" | "no_provider";
+  processedCount: number;
+  totalWithInstagram: number;
+  providerConfigured: boolean;
+  providerName: string;
+  providerType: string;
+};
+
+function formatSyncDate(dateString: string | null | undefined): string {
+  if (!dateString) return "Never";
+  try {
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return "Never";
+    return new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).format(d);
+  } catch {
+    return dateString;
+  }
+}
+
 export function AdminDashboard() {
   const [range, setRange] = useState("30d");
   const [stats, setStats] = useState<DashboardPayload | null>(null);
   const [analytics, setAnalytics] = useState<AnalyticsPayload | null>(null);
+  const [syncInfo, setSyncInfo] = useState<SyncInfo | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncNotice, setSyncNotice] = useState("");
+  const [syncError, setSyncError] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -71,18 +103,39 @@ export function AdminDashboard() {
     setLoading(true);
     setError("");
     try {
-        const [nextStats, nextAnalytics] = await Promise.all([
+      const [nextStats, nextAnalytics, nextSync] = await Promise.all([
         getData<DashboardPayload>("/api/admin/dashboard/stats"),
         getData<AnalyticsPayload>(`/api/admin/dashboard/analytics?range=${range}`),
+        getData<SyncInfo>("/api/admin/creators/sync-instagram").catch(() => null),
       ]);
       setStats(nextStats);
       setAnalytics(nextAnalytics);
+      if (nextSync) setSyncInfo(nextSync);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load dashboard.");
     } finally {
       setLoading(false);
     }
   }, [range]);
+
+  const handleSyncAll = async () => {
+    setSyncing(true);
+    setSyncNotice("");
+    setSyncError("");
+    try {
+      const response = await fetch("/api/admin/creators/sync-instagram", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to sync creator followers.");
+      }
+      setSyncNotice(result.message || "Creator followers synced successfully.");
+      await load();
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : "Sync failed.");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => {
     const timer = window.setTimeout(() => { void load(); }, 0);
@@ -130,6 +183,65 @@ export function AdminDashboard() {
     </div>
     {error && <div className="admin-inline-error" role="alert">{error}</div>}
     {loading && !stats ? <><BrandLoader variant="inline" label="Loading dashboard" /><div className="admin-kpi-grid">{Array.from({ length: 8 }, (_, index) => <div className="admin-skeleton admin-kpi-skeleton" key={index} />)}</div></> : <>
+      <section className="admin-panel admin-panel-padding" style={{ marginBottom: "18px" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <span className="admin-kpi-icon admin-tone-violet" style={{ width: "40px", height: "40px", display: "inline-flex", alignItems: "center", justifyContent: "center", borderRadius: "10px", background: "#f3effc", color: "#7459d2" }}>
+              <RotateCw size={19} className={syncing ? "admin-spin" : ""} />
+            </span>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+                <h2 style={{ fontSize: "15px", fontWeight: "650", margin: 0, color: "#111" }}>Instagram Follower Sync</h2>
+                <span className={`admin-status-pill admin-status-${syncInfo?.lastSyncStatus === "succeeded" ? "approved" : syncInfo?.lastSyncStatus === "processing" ? "pending" : syncInfo?.lastSyncStatus === "failed" ? "rejected" : "draft"}`}>
+                  {syncInfo?.lastSyncStatus === "succeeded" ? "Synced" : syncInfo?.lastSyncStatus === "processing" ? "Syncing…" : syncInfo?.lastSyncStatus === "failed" ? "Failed" : syncInfo?.providerConfigured ? "Ready" : "API Key Required"}
+                </span>
+              </div>
+              <p style={{ fontSize: "12px", color: "#6c6e79", margin: 0 }}>
+                Automatically updates all creator follower counts in MongoDB every 24 hours.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "22px" }}>
+            <div>
+              <span style={{ display: "block", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a8c99", fontWeight: "600" }}>Last Sync Date</span>
+              <b style={{ fontSize: "12px", color: "#222", fontWeight: "600" }}>{formatSyncDate(syncInfo?.lastSyncAt)}</b>
+            </div>
+            <div>
+              <span style={{ display: "block", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a8c99", fontWeight: "600" }}>Instagram Accounts</span>
+              <b style={{ fontSize: "12px", color: "#222", fontWeight: "600" }}>{syncInfo?.totalWithInstagram ?? 0} creators</b>
+            </div>
+            <div>
+              <span style={{ display: "block", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a8c99", fontWeight: "600" }}>Data Provider</span>
+              <b style={{ fontSize: "12px", color: "#222", fontWeight: "600" }}>{syncInfo?.providerName ?? "Checking…"}</b>
+            </div>
+
+            <button
+              type="button"
+              className="admin-button"
+              onClick={() => void handleSyncAll()}
+              disabled={syncing}
+              style={{ minHeight: "36px", padding: "0 16px" }}
+            >
+              <RotateCw size={14} className={syncing ? "admin-spin" : ""} />
+              {syncing ? "Syncing All…" : "Sync All"}
+            </button>
+          </div>
+        </div>
+
+        {syncNotice && (
+          <p className="admin-toast" style={{ marginTop: "14px" }} role="status">
+            {syncNotice}
+            <button onClick={() => setSyncNotice("")} aria-label="Dismiss notice"><X size={14} /></button>
+          </p>
+        )}
+        {syncError && (
+          <div className="admin-inline-error" style={{ marginTop: "14px" }} role="alert">
+            {syncError}
+            <button onClick={() => setSyncError("")} aria-label="Dismiss error"><X size={14} /></button>
+          </div>
+        )}
+      </section>
       <section className="admin-kpi-grid" aria-label="Key metrics">
         {cards.map(({ title, value, sub, icon: Icon, tone, href }) => {
           const content = <><span className={`admin-kpi-icon admin-tone-${tone}`}><Icon size={18} /></span><span className="admin-kpi-label">{title}</span><b className="admin-kpi-value">{value}</b><span className="admin-kpi-sub">{sub}</span></>;

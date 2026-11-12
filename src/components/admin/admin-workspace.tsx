@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Camera, ChevronLeft, ChevronRight, CirclePlus, Download, ExternalLink, LoaderCircle, Pencil, Search, ShieldCheck, Trash2, Upload, UserPlus, X } from "lucide-react";
+import { Camera, ChevronLeft, ChevronRight, CirclePlus, Download, ExternalLink, LoaderCircle, Pencil, RotateCw, Search, ShieldCheck, Trash2, Upload, UserPlus, X } from "lucide-react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { UserRole } from "@/models/User";
 import { FinancePayoutsPanel } from "@/components/admin/finance-payouts";
@@ -589,6 +589,16 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
     <div className="admin-toolbar">
       <label className="admin-search"><Search size={16} /><input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder={`Search ${definition.title.toLowerCase()}…`} aria-label={`Search ${definition.title}`} /></label>
       {definition.statuses && <label className="admin-filter-control"><span>Status</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="">All statuses</option>{definition.statuses.map((value) => <option value={value} key={value}>{label(value)}</option>)}</select></label>}
+      {resource === "creators" && <button className="admin-button admin-button-secondary" onClick={async () => {
+        try {
+          setNotice("Starting Instagram follower sync…");
+          const res = await requestJson<{ message: string }>("/api/admin/creators/sync-instagram", { method: "POST" });
+          setNotice(res.message || "Follower sync completed.");
+          await load();
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Sync failed.");
+        }
+      }}><RotateCw size={14} /> Sync Instagram</button>}
       {resource === "creators" && <button className="admin-button admin-button-secondary" onClick={() => { const q = new URLSearchParams(); if (search.trim()) q.set("q", search.trim()); if (status) q.set("status", status); window.open(`/api/admin/creators/export?${q}`, "_blank"); }}><Download size={15} /> Export CSV</button>}
       {resource === "enquiries" && <button className="admin-button admin-button-secondary" onClick={() => window.open("/api/admin/enquiries/export", "_blank")}><Download size={15} /> Export CSV</button>}
       {resource === "transactions" && <span className="admin-filter-note">Financial access is permission-controlled.</span>}
