@@ -14,7 +14,7 @@ export const GET = withApiErrors(async () => {
 
 export const POST = withApiErrors(async (request) => {
   validateMutationOrigin(request);
-  const actor = await requireAdminPermission("creator:read");
+  const actor = await requireAdminPermission("creator:manage");
   await enforceRateLimit({
     scope: "admin-meta-instagram-sync",
     identity: actor.id,

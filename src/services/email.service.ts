@@ -65,7 +65,7 @@ export async function enqueueEmail(to: string, dedupeKey: string, message: Email
   );
 }
 
-export async function dispatchPendingEmails(batchSize = 25) {
+export async function dispatchPendingEmails(batchSize = 25, timeBudgetMs?: number) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM?.trim();
   if (!apiKey || !from) {
@@ -74,7 +74,10 @@ export async function dispatchPendingEmails(batchSize = 25) {
 
   let sent = 0;
   let failed = 0;
+  const deadline = timeBudgetMs === undefined ? Number.POSITIVE_INFINITY : Date.now() + Math.max(1_000, timeBudgetMs);
   for (let index = 0; index < batchSize; index += 1) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs < 1_000) break;
     const now = new Date();
     const email = await EmailOutbox.findOneAndUpdate(
       {
@@ -107,7 +110,7 @@ export async function dispatchPendingEmails(batchSize = 25) {
           "Idempotency-Key": email.dedupeKey,
         },
         body: JSON.stringify({ from, to: [email.to], subject, html, text }),
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(Math.min(15_000, remainingMs)),
       });
       if (!response.ok) {
         email.status = "failed";

@@ -83,6 +83,7 @@ export interface MetaInstagramSyncInfo {
 }
 
 type CloudinaryUpload = { secureUrl: string; publicId: string };
+type ExternalRequestPolicy = { attempts: number; timeoutMs: number };
 
 function requiredConfiguration() {
   const {
@@ -197,6 +198,7 @@ async function metaResponseError(response: Response) {
 async function fetchMetaProfile(
   username: string,
   config: NonNullable<ReturnType<typeof requiredConfiguration>>,
+  requestPolicy?: ExternalRequestPolicy,
 ): Promise<MetaProfile> {
   if (!username) return { requested_username: username, sync_error: "Invalid Instagram username." };
   const fields = [
@@ -213,7 +215,7 @@ async function fetchMetaProfile(
   try {
     const response = await fetchWithRetry(endpoint, {
       headers: { Authorization: `Bearer ${config.metaAccessToken}` },
-    });
+    }, requestPolicy?.attempts, requestPolicy?.timeoutMs);
     if (!response.ok) {
       const failure = await metaResponseError(response);
       return { requested_username: username, sync_error: failure.message, sync_status: failure.status };
@@ -235,6 +237,7 @@ async function fetchMetaProfile(
 async function fetchMetaProfiles(
   creators: CreatorForSync[],
   config: NonNullable<ReturnType<typeof requiredConfiguration>>,
+  requestPolicy?: ExternalRequestPolicy,
 ) {
   const profiles: MetaProfile[] = new Array(creators.length);
   let nextIndex = 0;
@@ -242,7 +245,7 @@ async function fetchMetaProfiles(
     while (nextIndex < creators.length) {
       const index = nextIndex++;
       const username = normalizeInstagramUsername(creators[index].instagramUsername);
-      profiles[index] = await fetchMetaProfile(username, config);
+      profiles[index] = await fetchMetaProfile(username, config, requestPolicy);
     }
   });
   await Promise.all(workers);
@@ -277,11 +280,16 @@ export function isAllowedInstagramImageUrl(rawUrl: string): boolean {
   }
 }
 
-async function downloadInstagramImage(rawUrl: string) {
+async function downloadInstagramImage(rawUrl: string, requestPolicy?: ExternalRequestPolicy) {
   if (!isAllowedInstagramImageUrl(rawUrl)) {
     throw new Error("Meta returned an unsupported Instagram image host.");
   }
-  const response = await fetchWithRetry(rawUrl, { redirect: "follow", headers: { Accept: "image/*" } });
+  const response = await fetchWithRetry(
+    rawUrl,
+    { redirect: "follow", headers: { Accept: "image/*" } },
+    requestPolicy?.attempts,
+    requestPolicy?.timeoutMs,
+  );
   if (!response.ok) throw new Error(await responseError(response, "Instagram image"));
   if (!isAllowedInstagramImageUrl(response.url)) {
     throw new Error("Instagram profile image redirected to an unsupported host.");
@@ -314,6 +322,7 @@ async function uploadToCloudinary(
   folder: string,
   image: { bytes: Uint8Array; contentType: string },
   config: NonNullable<ReturnType<typeof requiredConfiguration>>,
+  requestPolicy?: ExternalRequestPolicy,
 ): Promise<CloudinaryUpload> {
   const timestamp = Math.floor(Date.now() / 1000);
   const publicId = randomUUID();
@@ -333,8 +342,8 @@ async function uploadToCloudinary(
   const response = await fetchWithRetry(
     `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudinaryCloudName)}/image/upload`,
     { method: "POST", body: form },
-    3,
-    45_000,
+    requestPolicy?.attempts ?? 3,
+    requestPolicy?.timeoutMs ?? 45_000,
   );
   const result = await response.json() as {
     secure_url?: unknown; public_id?: unknown; resource_type?: unknown; error?: { message?: unknown };
@@ -354,23 +363,29 @@ export function isManagedProfileImagePublicId(publicId?: string | null): boolean
   return !/^default(?:[-_]|$)/i.test(assetName);
 }
 
-async function validateCloudinaryImage(urlValue: string, cloudName: string) {
+async function validateCloudinaryImage(
+  urlValue: string,
+  cloudName: string,
+  requestPolicy?: ExternalRequestPolicy,
+) {
   const url = new URL(urlValue);
   if (url.protocol !== "https:" || url.hostname !== "res.cloudinary.com"
     || !url.pathname.startsWith(`/${cloudName}/image/upload/`)) {
     throw new Error("Cloudinary returned an invalid delivery URL.");
   }
-  for (let attempt = 0; attempt < 3; attempt++) {
-    let response = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(20_000) });
+  const attempts = requestPolicy?.attempts ?? 3;
+  const timeoutMs = requestPolicy?.timeoutMs ?? 20_000;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    let response = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(timeoutMs) });
     if (!response.ok || !response.headers.get("content-type")?.toLowerCase().startsWith("image/")) {
       response = await fetch(url, {
         headers: { Range: "bytes=0-0", Accept: "image/*" },
         redirect: "follow",
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     }
     if (response.ok && response.headers.get("content-type")?.toLowerCase().startsWith("image/")) return;
-    if (attempt < 2) await sleep(1_000 * (attempt + 1));
+    if (attempt < attempts - 1) await sleep(1_000 * (attempt + 1));
   }
   throw new Error("The uploaded Cloudinary image is not publicly accessible.");
 }
@@ -378,6 +393,7 @@ async function validateCloudinaryImage(urlValue: string, cloudName: string) {
 async function destroyCloudinaryImage(
   publicId: string,
   config: NonNullable<ReturnType<typeof requiredConfiguration>>,
+  requestPolicy?: ExternalRequestPolicy,
 ) {
   if (!isManagedProfileImagePublicId(publicId)) return;
   const timestamp = Math.floor(Date.now() / 1000);
@@ -391,6 +407,8 @@ async function destroyCloudinaryImage(
   const response = await fetchWithRetry(
     `https://api.cloudinary.com/v1_1/${encodeURIComponent(config.cloudinaryCloudName)}/image/destroy`,
     { method: "POST", body: form },
+    requestPolicy?.attempts,
+    requestPolicy?.timeoutMs,
   );
   const result = await response.json() as { result?: unknown; error?: { message?: unknown } };
   if (!response.ok || (result.result !== "ok" && result.result !== "not found")) {
@@ -573,6 +591,7 @@ async function syncCreator(
   creator: CreatorForSync,
   record: MetaProfile,
   config: NonNullable<ReturnType<typeof requiredConfiguration>>,
+  requestPolicy?: ExternalRequestPolicy,
 ): Promise<MetaInstagramSyncResult> {
   const creatorId = String(creator._id);
   const username = normalizeInstagramUsername(creator.instagramUsername);
@@ -593,7 +612,7 @@ async function syncCreator(
 
   let image: Awaited<ReturnType<typeof downloadInstagramImage>>;
   try {
-    image = await downloadInstagramImage(sourceUrl);
+    image = await downloadInstagramImage(sourceUrl, requestPolicy);
   } catch (error) {
     const warning = error instanceof Error ? error.message : "Image download failed.";
     await saveMetaWithoutReplacingImage(creator, record, warning);
@@ -620,11 +639,11 @@ async function syncCreator(
 
   let uploaded: CloudinaryUpload | null = null;
   try {
-    uploaded = await uploadToCloudinary(`${PROFILE_IMAGE_FOLDER}/${creatorId}`, image, config);
-    await validateCloudinaryImage(uploaded.secureUrl, config.cloudinaryCloudName);
+    uploaded = await uploadToCloudinary(`${PROFILE_IMAGE_FOLDER}/${creatorId}`, image, config, requestPolicy);
+    await validateCloudinaryImage(uploaded.secureUrl, config.cloudinaryCloudName, requestPolicy);
   } catch (error) {
     if (uploaded && isManagedProfileImagePublicId(uploaded.publicId)) {
-      try { await destroyCloudinaryImage(uploaded.publicId, config); } catch { /* best-effort orphan cleanup */ }
+      try { await destroyCloudinaryImage(uploaded.publicId, config, requestPolicy); } catch { /* best-effort orphan cleanup */ }
     }
     const warning = error instanceof Error ? error.message : "Cloudinary validation failed.";
     await saveMetaWithoutReplacingImage(creator, record, warning);
@@ -645,11 +664,11 @@ async function syncCreator(
       } },
     );
   } catch (error) {
-    try { await destroyCloudinaryImage(uploaded.publicId, config); } catch { /* best-effort orphan cleanup */ }
+    try { await destroyCloudinaryImage(uploaded.publicId, config, requestPolicy); } catch { /* best-effort orphan cleanup */ }
     return { creatorId, username, status: "failed", error: error instanceof Error ? error.message : "Database update failed; the old image was preserved." };
   }
   if (updated.matchedCount !== 1) {
-    try { await destroyCloudinaryImage(uploaded.publicId, config); } catch { /* best-effort orphan cleanup */ }
+    try { await destroyCloudinaryImage(uploaded.publicId, config, requestPolicy); } catch { /* best-effort orphan cleanup */ }
     return { creatorId, username, status: "failed", error: "Creator image changed before the database update; the old image was preserved." };
   }
 
@@ -666,7 +685,7 @@ async function syncCreator(
   });
   if (sharedReferences > 0) return { creatorId, username, status: "updated" };
   try {
-    await destroyCloudinaryImage(oldPublicId, config);
+    await destroyCloudinaryImage(oldPublicId, config, requestPolicy);
     return { creatorId, username, status: "updated" };
   } catch (error) {
     return {
@@ -908,7 +927,7 @@ async function claimJob(now: Date, force: boolean) {
 }
 
 export async function runWeeklyMetaInstagramSync(
-  options: { force?: boolean } = {},
+  options: { force?: boolean; batchSize?: number; requestPolicy?: ExternalRequestPolicy } = {},
 ): Promise<MetaInstagramSyncSummary> {
   const config = requiredConfiguration();
   if (!config) {
@@ -931,9 +950,13 @@ export async function runWeeklyMetaInstagramSync(
         { lastProfileSyncAt: { $lte: dueBefore } },
       ];
     }
-    const creators = await Creator.find(creatorFilter)
+    const creatorQuery = Creator.find(creatorFilter)
       .select("_id fullName instagramUsername profileImage profileImagePublicId profileImageSourceUrl profileImageSourceHash")
-      .lean<CreatorForSync[]>();
+      .sort({ lastProfileSyncAt: 1, _id: 1 });
+    if (options.batchSize !== undefined) {
+      creatorQuery.limit(Math.max(1, Math.min(25, Math.floor(options.batchSize))));
+    }
+    const creators = await creatorQuery.lean<CreatorForSync[]>();
     if (!creators.length) {
       claim.job.status = "succeeded";
       claim.job.completedAt = new Date();
@@ -942,14 +965,14 @@ export async function runWeeklyMetaInstagramSync(
       return { executed: true, reason: "nothing_due", processedCount: 0, updatedCount: 0, unchangedCount: 0, failedCount: 0, details: [] };
     }
 
-    const profiles = await fetchMetaProfiles(creators, config);
+    const profiles = await fetchMetaProfiles(creators, config, options.requestPolicy);
     const details: MetaInstagramSyncResult[] = new Array(creators.length);
     let nextIndex = 0;
     const workers = Array.from({ length: Math.min(3, creators.length) }, async () => {
       while (nextIndex < creators.length) {
         const index = nextIndex++;
         try {
-          details[index] = await syncCreator(creators[index], profiles[index], config);
+          details[index] = await syncCreator(creators[index], profiles[index], config, options.requestPolicy);
         } catch (error) {
           details[index] = {
             creatorId: String(creators[index]._id),

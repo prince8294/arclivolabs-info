@@ -7,7 +7,22 @@ import ScheduledJobRun from "@/models/ScheduledJobRun";
 import { dispatchPendingEmails } from "@/services/email.service";
 import { runWeeklyMetaInstagramSync } from "@/services/meta-instagram-sync.service";
 
-export const maxDuration = 600;
+export const maxDuration = 60;
+
+const EMAIL_TIME_BUDGET_MS = 15_000;
+const META_SYNC_BATCH_SIZE = 3;
+const META_REQUEST_TIMEOUT_MS = 5_000;
+
+function dispatchCronEmails() {
+  return dispatchPendingEmails(25, EMAIL_TIME_BUDGET_MS);
+}
+
+function runCronInstagramSync() {
+  return runWeeklyMetaInstagramSync({
+    batchSize: META_SYNC_BATCH_SIZE,
+    requestPolicy: { attempts: 1, timeoutMs: META_REQUEST_TIMEOUT_MS },
+  });
+}
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
@@ -30,11 +45,11 @@ export const GET = withApiErrors(async (request) => {
     { upsert: true, returnDocument: "after", setDefaultsOnInsert: true },
   );
   if (job.status === "succeeded") {
-    const emailDispatch = await dispatchPendingEmails();
+    const emailDispatch = await dispatchCronEmails();
     return apiSuccess({ invitationExpiry: "already_completed", emailDispatch });
   }
   if (job.status === "processing" && job.startedAt.getTime() > Date.now() - 5 * 60 * 1000) {
-    const emailDispatch = await dispatchPendingEmails();
+    const emailDispatch = await dispatchCronEmails();
     return apiSuccess({ invitationExpiry: "already_running", emailDispatch });
   }
   const claimed = await ScheduledJobRun.findOneAndUpdate(
@@ -49,7 +64,7 @@ export const GET = withApiErrors(async (request) => {
     { returnDocument: "after" },
   );
   if (!claimed) {
-    const emailDispatch = await dispatchPendingEmails();
+    const emailDispatch = await dispatchCronEmails();
     return apiSuccess({ invitationExpiry: "already_running", emailDispatch });
   }
 
@@ -58,8 +73,8 @@ export const GET = withApiErrors(async (request) => {
       { status: "pending", expiresAt: { $lte: now } },
       { $set: { status: "expired" } },
     );
-    const emailDispatch = await dispatchPendingEmails();
-    const metaInstagramSync = await runWeeklyMetaInstagramSync();
+    const emailDispatch = await dispatchCronEmails();
+    const metaInstagramSync = await runCronInstagramSync();
     const pendingEmails = await EmailOutbox.countDocuments({ status: { $in: ["pending", "failed", "blocked"] } });
     claimed.status = "succeeded";
     claimed.completedAt = new Date();
