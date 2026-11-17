@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, MapPin, Globe, Users, Mail, ChevronLeft, ChevronRight } from "lucide-react";
+import { Activity, ArrowUpRight, MapPin, Globe, Users, Mail, ChevronLeft, ChevronRight, Eye, BadgeCheck } from "lucide-react";
 import { BrandLoader } from "@/components/brand-loader";
 import { creators as demoCreators, type Creator } from "@/data/site-data";
 
@@ -27,6 +27,12 @@ type DirectoryCreator = {
   instagramUsername?: string;
   bio?: string;
   languages?: string[];
+  engagementRate?: number | null;
+  averageReelViews?: number | null;
+  metricsVerified?: boolean;
+  availability?: "available" | "unavailable";
+  verified?: boolean;
+  profileImageLastSyncedAt?: string | null;
 };
 
 type DirectoryResponse = {
@@ -65,12 +71,20 @@ function demoToDirectoryCreator(demo: Creator): DirectoryCreator {
     instagramUsername: undefined,
     bio: undefined,
     languages: [],
+    engagementRate: null,
+    averageReelViews: null,
+    metricsVerified: false,
+    availability: "available",
+    verified: false,
+    profileImageLastSyncedAt: null,
   };
 }
 
 function CreatorAvatar({ src, name, isDemo }: { src?: string; name: string; isDemo?: boolean }) {
   const [error, setError] = useState(false);
-  if (!src || error || src.trim().length === 0) return null;
+  if (!src || error || src.trim().length === 0) {
+    return <div className="creator-row-avatar" aria-label={`${name} profile image placeholder`}><span className="creator-row-avatar-initials">{initials(name)}</span></div>;
+  }
 
   return (
     <div className="creator-row-avatar">
@@ -107,6 +121,7 @@ function CreatorRow({ creator }: { creator: DirectoryCreator }) {
         <div className="creator-row-identity">
           <div className="creator-row-name-line">
             <h3 className="creator-row-name">{creator.fullName}</h3>
+            {creator.verified && <BadgeCheck className="creator-row-verified" size={15} aria-label="Verified creator" />}
             {creator.isDemo && <span className="creator-row-demo-badge">DEMO</span>}
           </div>
           <div className="creator-row-subline">
@@ -146,6 +161,28 @@ function CreatorRow({ creator }: { creator: DirectoryCreator }) {
             {formatFollowers(creator.followers)}
           </span>
         </div>
+        <div className="creator-row-stat">
+          <div className="creator-row-stat-head">
+            <Activity size={12} />
+            <span className="creator-row-stat-label">Engagement</span>
+          </div>
+          <span className="creator-row-stat-value">
+            {creator.metricsVerified && creator.engagementRate !== null && creator.engagementRate !== undefined
+              ? `${creator.engagementRate.toFixed(2)}%`
+              : "N/A"}
+          </span>
+        </div>
+        <div className="creator-row-stat">
+          <div className="creator-row-stat-head">
+            <Eye size={12} />
+            <span className="creator-row-stat-label">Avg. reels</span>
+          </div>
+          <span className="creator-row-stat-value">
+            {creator.metricsVerified && creator.averageReelViews !== null && creator.averageReelViews !== undefined
+              ? formatFollowers(creator.averageReelViews)
+              : "N/A"}
+          </span>
+        </div>
       </div>
 
       {/* RIGHT — actions */}
@@ -157,10 +194,14 @@ function CreatorRow({ creator }: { creator: DirectoryCreator }) {
           <Mail size={13} />
           Contact Creator
         </Link>
-        <span className="creator-row-platform-badge">{creator.primaryPlatform}</span>
+        <span className="creator-row-platform-badge">{creator.primaryPlatform} · {creator.availability === "unavailable" ? "Unavailable" : "Available"}</span>
       </div>
     </article>
   );
+}
+
+function initials(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 }
 
 export function CreatorDirectory() {
@@ -223,8 +264,16 @@ export function CreatorDirectory() {
         (followerRange === "50K–100K" && count >= 50_000 && count <= 100_000) ||
         (followerRange === "100K+" && count > 100_000);
       const categoryLabel = creator.contentCategories[0] ?? "";
+      const queryValue = query.trim().toLowerCase();
+      const searchableText = [
+        creator.fullName,
+        creator.instagramUsername,
+        creator.location,
+        ...creator.contentCategories,
+        ...(creator.languages ?? []),
+      ].filter(Boolean).join(" ").toLowerCase();
       return (
-        creator.fullName.toLowerCase().includes(query.toLowerCase()) &&
+        (!queryValue || searchableText.includes(queryValue)) &&
         (category === "All categories" || categoryLabel === category) &&
         (platform === "All platforms" || creator.primaryPlatform === platform) &&
         (location === "All locations" || creator.location.toLowerCase().includes(location.toLowerCase())) &&

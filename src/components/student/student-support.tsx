@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   AlertCircle,
   CheckCircle2,
   ChevronDown,
   Clock,
   HelpCircle,
-  Mail,
   MessageCircle,
   MessageSquare,
   Plus,
@@ -16,6 +16,11 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+
+function StudentModalPortal({ children }: { children: React.ReactNode }) {
+  if (typeof document === "undefined") return null;
+  return createPortal(children, document.querySelector(".admin-frame") ?? document.body);
+}
 
 type TicketMessage = {
   _id: string;
@@ -53,7 +58,7 @@ export function StudentSupport() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [notice, setNotice] = useState("");
 
   // Create Ticket Modal
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -99,7 +104,7 @@ export function StudentSupport() {
 
     setSubmitting(true);
     setError("");
-    setSuccess("");
+    setNotice("");
 
     try {
       const res = await fetch("/api/student/support", {
@@ -113,12 +118,12 @@ export function StudentSupport() {
         throw new Error(json.message || "Failed to submit support request.");
       }
 
-      setSuccess(`Support request ${json.data.ticketNumber} submitted successfully.`);
+      setNotice(`Support request ${json.data.ticketNumber} submitted successfully.`);
       setCreateModalOpen(false);
       setSubject("");
       setMessage("");
       loadTickets();
-      setTimeout(() => setSuccess(""), 5000);
+      setTimeout(() => setNotice(""), 5000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error creating ticket.");
     } finally {
@@ -172,152 +177,201 @@ export function StudentSupport() {
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-page-heading">
         <div>
-          <span className="text-xs font-bold tracking-widest text-[#7459d2] uppercase block mb-1">
-            Help Desk & Assistance
-          </span>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Support Desk</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Submit questions, track referral inquiries, and communicate directly with the agency administration.
+          <span className="admin-eyebrow">AMBASSADOR ASSISTANCE & DESK</span>
+          <h1>Support Desk</h1>
+          <p>
+            Submit inquiries, track creator verification status, ask payout questions, and receive direct replies from agency coordinators.
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setError("");
-            setCreateModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-[#7459d2] hover:bg-[#6247bf] rounded-lg transition-colors shadow-xs shrink-0"
-        >
-          <Plus size={15} />
-          <span>New Support Request</span>
-        </button>
+        <div className="admin-heading-actions">
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setCreateModalOpen(true);
+            }}
+            className="admin-button"
+          >
+            <Plus size={15} />
+            <span>New Support Request</span>
+          </button>
+        </div>
       </div>
 
       {/* Global Alerts */}
-      {success && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{success}</span>
-        </div>
+      {notice && (
+        <p className="admin-toast" role="status">
+          {notice}
+          <button onClick={() => setNotice("")} aria-label="Dismiss notice">
+            <X size={14} />
+          </button>
+        </p>
       )}
       {error && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
-          <AlertCircle size={16} className="text-rose-600 shrink-0" />
-          <span>{error}</span>
+        <div className="admin-inline-error" role="alert">
+          {error}
+          <button onClick={() => setError("")} aria-label="Dismiss error">
+            <X size={14} />
+          </button>
         </div>
       )}
 
-      {/* Tickets List Section */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+      {/* Tickets List Table Panel */}
+      <div className="admin-panel admin-table-panel">
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #e8e9ef",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+          }}
+        >
           <div>
-            <h3 className="text-sm font-bold text-gray-900">Your Support Requests</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Review replies from the agency coordinator team ({tickets.length} total).
+            <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#292b3e", margin: 0 }}>
+              Your Support Requests
+            </h2>
+            <p style={{ fontSize: "11px", color: "#85889d", margin: "4px 0 0" }}>
+              Track ticket correspondence with the agency coordinator team ({tickets.length} total).
             </p>
           </div>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-gray-400">
-            <div className="w-7 h-7 border-2 border-[#7459d2] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-xs">Loading support requests…</p>
+          <div className="admin-empty-state" style={{ minHeight: "260px" }}>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                border: "2px solid #7359d2",
+                borderTopColor: "transparent",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+                marginBottom: "12px",
+              }}
+            />
+            <b>Loading support tickets…</b>
           </div>
         ) : tickets.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-purple-50 text-[#7459d2] flex items-center justify-center mx-auto mb-3">
-              <MessageSquare size={22} />
-            </div>
-            <h3 className="text-sm font-bold text-gray-900">No support tickets yet</h3>
-            <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1 leading-relaxed">
-              Have questions regarding creator attribution, follower verification, or payouts? Submit a ticket and our team will assist you.
+          <div className="admin-empty-state" style={{ minHeight: "260px" }}>
+            <MessageSquare size={32} style={{ color: "#c4c7d6", marginBottom: "8px" }} />
+            <b>No support requests opened yet</b>
+            <p style={{ margin: "5px 0 16px", fontSize: "11px", color: "#8b8fa2", maxWidth: "420px" }}>
+              Need assistance with follower verification, referral attribution, or payment processing? Submit a support ticket and our team will get back to you promptly.
             </p>
-            <div className="mt-5">
-              <button
-                onClick={() => setCreateModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#7459d2] bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
-              >
-                <Plus size={13} />
-                <span>Create Support Request</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setCreateModalOpen(true)}
+              className="admin-button"
+            >
+              <Plus size={14} />
+              <span>Open Support Request</span>
+            </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px] font-bold">
-                  <th className="py-3 px-4">Ticket ID</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Subject</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Last Reply</th>
-                  <th className="py-3 px-4 text-right">Action</th>
+                <tr>
+                  <th>TICKET #</th>
+                  <th>CATEGORY</th>
+                  <th>SUBJECT</th>
+                  <th>STATUS</th>
+                  <th>LAST ACTIVITY</th>
+                  <th style={{ textAlign: "right" }}>ACTION</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {tickets.map((t) => (
-                  <tr key={t._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-[#6247bf]">
-                      {t.ticketNumber}
+                  <tr key={t._id}>
+                    <td>
+                      <span
+                        style={{
+                          fontFamily: "monospace",
+                          fontWeight: "700",
+                          color: "#7257ce",
+                          fontSize: "10.5px",
+                        }}
+                      >
+                        {t.ticketNumber}
+                      </span>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700">
+                    <td>
+                      <span
+                        style={{
+                          fontSize: "9.5px",
+                          fontWeight: "600",
+                          color: "#5b5e70",
+                          background: "#f0f1f5",
+                          padding: "3px 7px",
+                          borderRadius: "4px",
+                        }}
+                      >
                         {t.category}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-medium text-gray-900">
-                      <div>{t.subject}</div>
-                      {t.latestMessageSnippet && (
-                        <div className="text-[11px] text-gray-400 truncate max-w-xs mt-0.5">
-                          {t.latestMessageSnippet}
-                        </div>
-                      )}
+                    <td>
+                      <div>
+                        <span className="admin-primary-cell" style={{ maxWidth: "260px" }}>
+                          {t.subject}
+                        </span>
+                        {t.latestMessageSnippet && (
+                          <div style={{ fontSize: "9.5px", color: "#9598a8", maxWidth: "260px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {t.latestMessageSnippet}
+                          </div>
+                        )}
+                      </div>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td>
                       {t.status === "open" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <Clock size={11} />
-                          <span>Open</span>
+                        <span className="admin-status-pill admin-status-approved">
+                          <Clock size={10} style={{ marginRight: "3px" }} />
+                          Open
                         </span>
                       ) : t.status === "in_progress" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                          <MessageCircle size={11} />
-                          <span>In Progress</span>
+                        <span className="admin-status-pill admin-status-proposal_sent">
+                          <MessageCircle size={10} style={{ marginRight: "3px" }} />
+                          In Progress
                         </span>
                       ) : t.status === "resolved" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-[#7459d2] border border-purple-200">
-                          <CheckCircle2 size={11} />
-                          <span>Resolved</span>
+                        <span className="admin-status-pill admin-status-approved">
+                          <CheckCircle2 size={10} style={{ marginRight: "3px" }} />
+                          Resolved
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-600 border border-gray-200">
-                          <XCircle size={11} />
-                          <span>Closed</span>
+                        <span className="admin-status-pill admin-status-rejected">
+                          <XCircle size={10} style={{ marginRight: "3px" }} />
+                          Closed
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-400 text-[11px] whitespace-nowrap">
-                      {new Date(t.lastReplyAt || t.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      <span className="block text-[10px] text-gray-400">
-                        by {t.lastReplyBy === "admin" ? "Admin" : "You"}
+                    <td>
+                      <span style={{ color: "#676a7c", fontSize: "10px" }}>
+                        {new Date(t.lastReplyAt || t.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <span style={{ display: "block", fontSize: "9px", color: "#9da0b1" }}>
+                        by {t.lastReplyBy === "admin" ? "Coordinator" : "You"}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td style={{ textAlign: "right" }}>
                       <button
+                        type="button"
                         onClick={() => openTicketThread(t._id)}
-                        className="px-3 py-1.5 text-xs font-semibold text-[#7459d2] hover:bg-purple-50 rounded-lg border border-purple-200 transition-colors"
+                        className="admin-small-button"
                       >
-                        View & Reply
+                        <span>View thread</span>
                       </button>
                     </td>
                   </tr>
@@ -328,210 +382,82 @@ export function StudentSupport() {
         )}
       </div>
 
-      {/* New Support Request Modal */}
-      {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-gray-200">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-              <div>
-                <h3 className="text-base font-bold text-gray-900">New Support Request</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Submit an inquiry to the agency support team</p>
-              </div>
-              <button
-                onClick={() => setCreateModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateTicket} className="mt-4 space-y-4 text-xs">
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7459d2]"
-                >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Subject</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Brief summary of your request"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7459d2]"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-gray-700 mb-1">Message</label>
-                <textarea
-                  required
-                  rows={4}
-                  placeholder="Provide all relevant details (e.g. creator handle, dates, questions)..."
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7459d2]"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setCreateModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-[#7459d2] hover:bg-[#6247bf] rounded-lg transition-colors disabled:opacity-50"
-                >
-                  {submitting ? "Submitting…" : "Submit Request"}
-                </button>
-              </div>
-            </form>
-          </div>
+      {/* Frequently Asked Questions */}
+      <div className="admin-panel admin-panel-padding">
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+          <HelpCircle size={15} style={{ color: "#7257ce" }} />
+          <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#25273a", margin: 0 }}>
+            Frequently Asked Ambassador Questions
+          </h2>
         </div>
-      )}
 
-      {/* Ticket Conversation Modal */}
-      {activeTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-xl border border-gray-200">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-gray-100 flex items-start justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs font-bold text-[#6247bf]">
-                    {activeTicket.ticketNumber}
-                  </span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700">
-                    {activeTicket.category}
-                  </span>
-                  <span className="capitalize text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-50 text-[#7459d2]">
-                    Status: {activeTicket.status.replace("_", " ")}
-                  </span>
-                </div>
-                <h3 className="text-base font-bold text-gray-900 mt-1">{activeTicket.subject}</h3>
-              </div>
-              <button
-                onClick={() => setActiveTicket(null)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Conversation Messages */}
-            <div className="p-5 flex-1 overflow-y-auto space-y-4 text-xs bg-gray-50/50">
-              {activeTicket.messages?.map((msg) => (
-                <div
-                  key={msg._id}
-                  className={`flex flex-col ${
-                    msg.senderRole === "student" ? "items-end" : "items-start"
-                  }`}
-                >
-                  <div className="flex items-center gap-1.5 mb-1 text-[11px] text-gray-500">
-                    <span className="font-semibold text-gray-800">
-                      {msg.senderRole === "student" ? "You" : `${msg.senderName} (Admin)`}
-                    </span>
-                    <span>•</span>
-                    <span>
-                      {new Date(msg.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <div
-                    className={`max-w-md p-3.5 rounded-2xl text-xs leading-relaxed whitespace-pre-wrap ${
-                      msg.senderRole === "student"
-                        ? "bg-[#7459d2] text-white rounded-tr-none shadow-xs"
-                        : "bg-white text-gray-800 border border-gray-200 rounded-tl-none shadow-xs"
-                    }`}
-                  >
-                    {msg.message}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Reply Input Box */}
-            <form onSubmit={handleSendReply} className="p-4 bg-white border-t border-gray-100">
-              <div className="flex gap-2">
-                <textarea
-                  rows={2}
-                  required
-                  placeholder="Type your reply here..."
-                  value={replyMessage}
-                  onChange={(e) => setReplyMessage(e.target.value)}
-                  className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#7459d2] resize-none"
-                />
-                <button
-                  type="submit"
-                  disabled={replySubmitting || !replyMessage.trim()}
-                  className="px-4 py-2 bg-[#7459d2] hover:bg-[#6247bf] text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50 self-end"
-                >
-                  <Send size={13} />
-                  <span>{replySubmitting ? "Sending…" : "Reply"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Frequently Asked Questions Section */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-6">
-        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <HelpCircle size={16} className="text-[#7459d2]" />
-          <span>Frequently Asked Questions</span>
-        </h3>
-        <div className="space-y-3 text-xs">
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           {[
             {
               q: "How does the creator referral link work?",
-              a: "When you share your personal registration link (arclivolabs.com/join-as-creator/YOUR_CODE), your referral code is automatically captured and attributed to your student account permanently upon form submission.",
+              a: "When you share your personal registration link (arclivolabs.com/join-as-creator/YOUR_CODE), your referral code is captured automatically and attributed to your student account permanently upon creator form submission.",
             },
             {
               q: "When will my pending commission be approved?",
-              a: "Administration verifies creator profiles within 24-48 hours. Once verified and follower counts are confirmed, commission is instantly credited to your Total Earnings balance.",
+              a: "Administration reviews creator profiles within 24-48 business hours. Once verified and follower metrics are confirmed, commission is automatically credited to your Total Earnings ledger balance.",
             },
             {
               q: "How are ambassador payouts disbursed?",
-              a: "Payouts are disbursed via UPI or Bank Transfer once approved by administration. You can view all processed transactions under Payment History.",
+              a: "Payouts are disbursed via UPI or direct bank transfer once recorded by administration. You can inspect all processed transactions under the Payment History section with their UTR numbers.",
+            },
+            {
+              q: "Can I reach out to creators across different niches?",
+              a: "Yes! ArclivoLabs collaborates with creators in lifestyle, fashion, tech, gaming, beauty, fitness, travel, and business. Choose relevant DM templates from the outreach toolkit.",
             },
           ].map((item, idx) => (
-            <div key={idx} className="border border-gray-100 rounded-lg overflow-hidden">
+            <div
+              key={idx}
+              style={{
+                border: "1px solid #ebecef",
+                borderRadius: "7px",
+                overflow: "hidden",
+                background: "white",
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
-                className="w-full text-left p-3 font-semibold text-gray-800 flex items-center justify-between hover:bg-gray-50"
+                style={{
+                  width: "100%",
+                  textAlign: "left",
+                  padding: "11px 14px",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  color: "#282a3c",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: openFaqIndex === idx ? "#faf9ff" : "white",
+                  border: 0,
+                  cursor: "pointer",
+                }}
               >
                 <span>{item.q}</span>
                 <ChevronDown
                   size={14}
-                  className={`text-gray-400 transition-transform ${
-                    openFaqIndex === idx ? "rotate-180" : ""
-                  }`}
+                  style={{
+                    color: "#999caa",
+                    transform: openFaqIndex === idx ? "rotate(180deg)" : "none",
+                    transition: "transform 0.16s",
+                  }}
                 />
               </button>
               {openFaqIndex === idx && (
-                <div className="p-3 text-gray-600 bg-gray-50/50 border-t border-gray-100 leading-relaxed text-[11px]">
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    fontSize: "11px",
+                    lineHeight: "1.6",
+                    color: "#696c7e",
+                    background: "#fbfbfc",
+                    borderTop: "1px solid #ebecef",
+                  }}
+                >
                   {item.a}
                 </div>
               )}
@@ -539,6 +465,244 @@ export function StudentSupport() {
           ))}
         </div>
       </div>
+
+      {/* New Support Request Modal (Portal) */}
+      {createModalOpen && (
+        <StudentModalPortal>
+          <div
+            className="admin-modal-backdrop"
+            onClick={() => setCreateModalOpen(false)}
+          >
+            <div
+              className="admin-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="admin-modal-heading">
+                <div>
+                  <span className="admin-eyebrow">SUPPORT REQUEST</span>
+                  <h2 style={{ fontFamily: "var(--admin-font-serif, Georgia, serif)", fontSize: "20px" }}>
+                    Create Support Ticket
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="admin-icon-button"
+                  aria-label="Close modal"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateTicket} className="admin-form-grid">
+                <label className="admin-form-field">
+                  <span>Category *</span>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                  >
+                    {categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="admin-form-field">
+                  <span>Subject *</span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Brief summary of your inquiry"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                  />
+                </label>
+
+                <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+                  <span>Message *</span>
+                  <textarea
+                    required
+                    rows={4}
+                    placeholder="Provide all relevant details (e.g. creator @handle, dates, questions)..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                  />
+                </label>
+
+                <div className="admin-modal-actions" style={{ gridColumn: "1 / -1" }}>
+                  <button
+                    type="button"
+                    onClick={() => setCreateModalOpen(false)}
+                    className="admin-button admin-button-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="admin-button"
+                  >
+                    {submitting ? "Submitting…" : "Submit Request"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </StudentModalPortal>
+      )}
+
+      {/* Ticket Conversation Modal (Portal) */}
+      {activeTicket && (
+        <StudentModalPortal>
+          <div
+            className="admin-modal-backdrop"
+            onClick={() => setActiveTicket(null)}
+          >
+            <div
+              className="admin-modal"
+              style={{ width: "min(100%, 720px)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="admin-modal-heading">
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <span
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        color: "#7257ce",
+                      }}
+                    >
+                      {activeTicket.ticketNumber}
+                    </span>
+                    <span className="admin-status-pill admin-status-approved">
+                      {activeTicket.category}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        padding: "2px 6px",
+                        borderRadius: "99px",
+                        background: "#f0f1f5",
+                        color: "#5f6274",
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      Status: {activeTicket.status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <h2 style={{ fontFamily: "var(--admin-font-serif, Georgia, serif)", fontSize: "18px", margin: 0 }}>
+                    {activeTicket.subject}
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTicket(null)}
+                  className="admin-icon-button"
+                  aria-label="Close conversation"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              {/* Message Thread */}
+              <div
+                style={{
+                  maxHeight: "340px",
+                  overflowY: "auto",
+                  padding: "16px",
+                  background: "#f9f9fc",
+                  borderRadius: "8px",
+                  border: "1px solid #ebecef",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                  marginBottom: "16px",
+                }}
+              >
+                {activeTicket.messages?.map((msg) => (
+                  <div
+                    key={msg._id}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: msg.senderRole === "student" ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <div style={{ fontSize: "10px", color: "#8a8d9f", marginBottom: "4px", display: "flex", gap: "6px" }}>
+                      <strong style={{ color: "#343649" }}>
+                        {msg.senderRole === "student" ? "You" : `${msg.senderName} (Coordinator)`}
+                      </strong>
+                      <span>•</span>
+                      <span>
+                        {new Date(msg.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+
+                    <div
+                      style={{
+                        maxWidth: "85%",
+                        padding: "10px 14px",
+                        borderRadius: "8px",
+                        fontSize: "11px",
+                        lineHeight: "1.55",
+                        whiteSpace: "pre-wrap",
+                        background: msg.senderRole === "student" ? "#7257ce" : "white",
+                        color: msg.senderRole === "student" ? "white" : "#282a3c",
+                        border: msg.senderRole === "student" ? "none" : "1px solid #e5e6ee",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      {msg.message}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Reply Input */}
+              <form onSubmit={handleSendReply}>
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <textarea
+                    rows={2}
+                    required
+                    placeholder="Type your response to the coordinator team…"
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      fontSize: "11px",
+                      border: "1px solid #e2e4ec",
+                      borderRadius: "6px",
+                      outline: 0,
+                      color: "#282a3c",
+                      resize: "none",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={replySubmitting || !replyMessage.trim()}
+                    className="admin-button"
+                    style={{ alignSelf: "flex-end" }}
+                  >
+                    <Send size={13} />
+                    <span>{replySubmitting ? "Sending…" : "Reply"}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </StudentModalPortal>
+      )}
     </div>
   );
 }

@@ -1,16 +1,18 @@
 import { z } from "zod";
-import { cleanText, emailAddress, phoneNumber } from "@/lib/validations/common";
+import { cleanText, emailAddress, phoneNumber, safeUrl } from "@/lib/validations/common";
+
+export const passwordSchema = z.string()
+  .min(12, "Password must be at least 12 characters.")
+  .max(128)
+  .regex(/[a-z]/, "Password must contain a lowercase letter.")
+  .regex(/[A-Z]/, "Password must contain an uppercase letter.")
+  .regex(/[0-9]/, "Password must contain a number.")
+  .regex(/[^A-Za-z0-9]/, "Password must contain a symbol.");
 
 export const registerSchema = z.object({
   name: cleanText(120, 2),
   email: emailAddress,
-  password: z.string()
-    .min(12, "Password must be at least 12 characters.")
-    .max(128)
-    .regex(/[a-z]/, "Password must contain a lowercase letter.")
-    .regex(/[A-Z]/, "Password must contain an uppercase letter.")
-    .regex(/[0-9]/, "Password must contain a number.")
-    .regex(/[^A-Za-z0-9]/, "Password must contain a symbol."),
+  password: passwordSchema,
   phone: phoneNumber.optional(),
   role: z.enum(["brand", "creator"]).default("brand"),
 });
@@ -34,7 +36,7 @@ export const resetPasswordSchema = z.object({
 export const updateUserSchema = z.object({
   name: cleanText(120, 2).optional(),
   phone: phoneNumber.optional(),
-  profileImage: z.string().trim().url().max(2048).optional(),
+  profileImage: safeUrl.optional(),
 }).strict();
 
 export type LoginInput = z.infer<typeof loginSchema>;

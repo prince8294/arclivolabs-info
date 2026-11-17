@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeUrl } from "@/lib/validations/common";
 
 const serverEnvironmentSchema = z.object({
   MONGODB_URI: z.string().min(1).refine(
@@ -6,8 +7,8 @@ const serverEnvironmentSchema = z.object({
     "Expected a MongoDB connection string.",
   ),
   AUTH_SECRET: z.string().min(32),
-  NEXTAUTH_URL: z.string().url(),
-  NEXT_PUBLIC_APP_URL: z.string().url(),
+  NEXTAUTH_URL: safeUrl,
+  NEXT_PUBLIC_APP_URL: safeUrl,
 });
 
 export function validateServerEnvironment(environment: NodeJS.ProcessEnv = process.env) {

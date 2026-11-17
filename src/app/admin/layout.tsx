@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DM_Sans, Fraunces } from "next/font/google";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { ApiError } from "@/lib/api-response";
 import { auth, sessionCookieName } from "@/lib/auth";
 import { roleHasPermission } from "@/lib/admin/permissions";
@@ -24,6 +25,7 @@ const adminSerif = Fraunces({
 });
 
 async function ProtectedAdmin({ children }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
   const cookieStore = await cookies();
   if (!cookieStore.has(sessionCookieName)) redirect("/login?callbackUrl=%2Fadmin%2Fdashboard");
   const session = await auth();

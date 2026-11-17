@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
+  Check,
   CheckCircle2,
   Clock,
+  Copy,
+  ExternalLink,
   MessageSquareText,
+  Search,
   ShieldCheck,
   Users,
+  X,
 } from "lucide-react";
 
 function InstagramIcon({ size = 12 }: { size?: number }) {
@@ -60,6 +65,10 @@ export function CreatorReferralsView({
   const [referralCode, setReferralCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     async function fetchReferrals() {
@@ -82,147 +91,281 @@ export function CreatorReferralsView({
     fetchReferrals();
   }, [filterType]);
 
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://arclivolabs.com";
+  const referralLink = `${origin}/join-as-creator/${referralCode}`;
+
+  function copyCode() {
+    if (!referralCode) return;
+    navigator.clipboard.writeText(referralCode);
+    setCopiedCode(true);
+    setNotice("Referral code copied to clipboard!");
+    setTimeout(() => {
+      setCopiedCode(false);
+      setNotice("");
+    }, 2500);
+  }
+
+  function copyLink() {
+    if (!referralCode) return;
+    navigator.clipboard.writeText(referralLink);
+    setCopiedLink(true);
+    setNotice("Creator registration link copied to clipboard!");
+    setTimeout(() => {
+      setCopiedLink(false);
+      setNotice("");
+    }, 2500);
+  }
+
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (item) =>
+        item.creatorName.toLowerCase().includes(q) ||
+        item.creatorHandle.toLowerCase().includes(q) ||
+        (item.category && item.category.toLowerCase().includes(q))
+    );
+  }, [items, search]);
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-page-heading">
         <div>
-          <span className="text-xs font-bold tracking-widest text-[#7459d2] uppercase block mb-1">
-            Referral Network
-          </span>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{title}</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">{description}</p>
+          <span className="admin-eyebrow">REFERRAL NETWORK</span>
+          <h1>{title}</h1>
+          <p>{description}</p>
         </div>
 
-        <Link
-          href="/student/dm-templates"
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-[#7459d2] hover:bg-[#6247bf] rounded-lg transition-colors shadow-xs shrink-0"
-        >
-          <MessageSquareText size={14} />
-          <span>Outreach DM Templates</span>
-        </Link>
-      </div>
-
-      {/* Security Privacy Notice */}
-      <div className="p-3.5 bg-blue-50/70 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
-        <ShieldCheck size={16} className="text-blue-600 shrink-0 mt-0.5" />
-        <div className="text-[11px] leading-relaxed text-blue-800">
-          <strong>Privacy & Security Protection:</strong> In accordance with creator privacy policies, private creator contact numbers, email addresses, and private agreements are never displayed in student dashboards.
-        </div>
-      </div>
-
-      {/* Referrals List Table / Empty State */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-        {loading ? (
-          <div className="py-16 text-center text-gray-400">
-            <div className="w-7 h-7 border-2 border-[#7459d2] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-xs">Loading referrals…</p>
-          </div>
-        ) : error ? (
-          <div className="p-6 text-center text-rose-600 text-xs">
-            <p>{error}</p>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="py-16 px-4 text-center">
-            <div className="w-12 h-12 rounded-full bg-purple-50 text-[#7459d2] flex items-center justify-center mx-auto mb-3">
-              {filterType === "verified" ? (
-                <CheckCircle2 size={24} />
-              ) : filterType === "pending" ? (
-                <Clock size={24} />
-              ) : (
-                <Users size={24} />
-              )}
-            </div>
-            <h3 className="text-sm font-bold text-gray-800">No {filterType} referrals yet</h3>
-            <p className="text-xs text-gray-500 max-w-md mx-auto mt-1 leading-relaxed">
-              {filterType === "verified"
-                ? "Once agency administrators verify creators who applied with your code, they will be listed here with approved status."
-                : filterType === "pending"
-                ? "When creators register using your referral code, they appear here while undergoing quality & metric verification."
-                : `Start pitching creators on Instagram using your code (${referralCode || "your code"}). As soon as creators apply, they will appear here.`}
-            </p>
-            <div className="mt-5">
-              <Link
-                href="/student/dm-templates"
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#7459d2] hover:bg-purple-50 rounded-lg border border-purple-200 transition-colors"
+        <div className="admin-heading-actions">
+          {referralCode && (
+            <>
+              <button
+                type="button"
+                onClick={copyCode}
+                className="admin-button admin-button-secondary"
+                title="Copy referral code"
               >
-                <span>View Instagram Outreach Templates</span>
-                <ArrowRight size={13} />
-              </Link>
-            </div>
+                {copiedCode ? <Check size={14} style={{ color: "#168d65" }} /> : <Copy size={13} />}
+                <span>Code: <strong style={{ fontFamily: "monospace" }}>{referralCode}</strong></span>
+              </button>
+
+              <button
+                type="button"
+                onClick={copyLink}
+                className="admin-button"
+              >
+                {copiedLink ? <Check size={14} /> : <ExternalLink size={14} />}
+                <span>{copiedLink ? "Link Copied!" : "Copy Registration Link"}</span>
+              </button>
+            </>
+          )}
+
+          <Link
+            href="/student/dm-templates"
+            className="admin-button admin-button-secondary"
+          >
+            <MessageSquareText size={14} />
+            <span>Outreach DM Templates</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Global Alerts */}
+      {notice && (
+        <p className="admin-toast" role="status">
+          {notice}
+          <button onClick={() => setNotice("")} aria-label="Dismiss notice">
+            <X size={14} />
+          </button>
+        </p>
+      )}
+      {error && (
+        <div className="admin-inline-error" role="alert">
+          {error}
+          <button onClick={() => setError("")} aria-label="Dismiss error">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Privacy Notice Banner */}
+      <div
+        className="admin-panel admin-panel-padding"
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "12px",
+          background: "#fcfcff",
+          borderLeft: "3px solid #7257ce",
+        }}
+      >
+        <ShieldCheck size={16} style={{ color: "#7257ce", flexShrink: 0, marginTop: "2px" }} />
+        <div>
+          <b style={{ fontSize: "11px", color: "#2d3045" }}>Creator Privacy & Security Protection</b>
+          <p style={{ margin: "2px 0 0", fontSize: "10.5px", color: "#777a8e", lineHeight: "1.5" }}>
+            In adherence to privacy regulations and creator onboarding terms, sensitive contact information (such as personal phone numbers, emails, and financial contracts) is accessible only to agency administrators.
+          </p>
+        </div>
+      </div>
+
+      {/* Search & Toolbar */}
+      <div className="admin-toolbar">
+        <div className="admin-search">
+          <Search size={14} />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search creators by name or @handle…"
+          />
+        </div>
+
+        <div className="admin-filter-note">
+          Showing <b>{filteredItems.length}</b> of {items.length} records
+        </div>
+      </div>
+
+      {/* Referrals Table Panel */}
+      <div className="admin-panel admin-table-panel">
+        {loading ? (
+          <div className="admin-empty-state" style={{ minHeight: "280px" }}>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                border: "2px solid #7359d2",
+                borderTopColor: "transparent",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+                marginBottom: "12px",
+              }}
+            />
+            <b>Loading creator referrals…</b>
+            <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#8a8d9e" }}>
+              Retrieving live verification data from database.
+            </p>
+          </div>
+        ) : filteredItems.length === 0 ? (
+          <div className="admin-empty-state" style={{ minHeight: "260px" }}>
+            {filterType === "verified" ? (
+              <CheckCircle2 size={32} style={{ color: "#c4c7d6", marginBottom: "8px" }} />
+            ) : filterType === "pending" ? (
+              <Clock size={32} style={{ color: "#c4c7d6", marginBottom: "8px" }} />
+            ) : (
+              <Users size={32} style={{ color: "#c4c7d6", marginBottom: "8px" }} />
+            )}
+            <b>
+              {search
+                ? "No creators match your search"
+                : filterType === "verified"
+                ? "No verified creator referrals yet"
+                : filterType === "pending"
+                ? "No pending creator referrals"
+                : "No referred creators yet"}
+            </b>
+            <p style={{ margin: "5px 0 16px", fontSize: "11px", color: "#8b8fa2", maxWidth: "420px" }}>
+              {search
+                ? "Try clearing the search query or verifying the creator handle."
+                : filterType === "verified"
+                ? "Once agency administrators inspect and verify follower counts for your referred creators, they will appear here with approved commission amounts."
+                : filterType === "pending"
+                ? "When creators register through your link, they are automatically queued for quality and follower verification."
+                : `Pitch Instagram creators using your code (${referralCode || "ARCLIVO"}). Once they register, their profiles will appear here.`}
+            </p>
+            <Link href="/student/dm-templates" className="admin-button">
+              <MessageSquareText size={14} />
+              <span>Browse Outreach DM Templates</span>
+            </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px] font-bold">
-                  <th className="py-3 px-4">Instagram Creator</th>
-                  <th className="py-3 px-4">Followers</th>
-                  <th className="py-3 px-4">Registration Date</th>
-                  <th className="py-3 px-4">Verification Status</th>
-                  <th className="py-3 px-4 text-right">Commission</th>
+                <tr>
+                  <th>INSTAGRAM CREATOR</th>
+                  <th>VERIFIED FOLLOWERS</th>
+                  <th>REGISTRATION DATE</th>
+                  <th>VERIFICATION STATUS</th>
+                  <th style={{ textAlign: "right" }}>COMMISSION EARNED</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {items.map((ref) => (
-                  <tr key={ref._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-900">{ref.creatorName}</div>
-                      <div className="text-[#7459d2] font-mono text-[11px] flex items-center gap-1 mt-0.5">
-                        <InstagramIcon size={11} />
-                        <span>@{ref.creatorHandle}</span>
+              <tbody>
+                {filteredItems.map((ref) => (
+                  <tr key={ref._id}>
+                    <td>
+                      <div>
+                        <span className="admin-primary-cell">{ref.creatorName}</span>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            fontFamily: "monospace",
+                            color: "#7257ce",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            marginTop: "2px",
+                          }}
+                        >
+                          <InstagramIcon size={11} />
+                          <span>@{ref.creatorHandle}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-900">
+                    <td>
+                      <div style={{ fontWeight: "600", color: "#2d3043" }}>
                         {(ref.confirmedFollowers ?? ref.followers ?? 0).toLocaleString()}
                       </div>
                       {ref.confirmedFollowers !== undefined && ref.confirmedFollowers !== ref.followers && (
-                        <div className="text-[10px] text-gray-400">
-                          Applied with: {(ref.followers ?? 0).toLocaleString()}
+                        <div style={{ fontSize: "9px", color: "#9598a8" }}>
+                          Applied: {(ref.followers ?? 0).toLocaleString()}
                         </div>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-500">
-                      {new Date(ref.registrationDate || ref.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                    <td>
+                      <span style={{ color: "#676a7c" }}>
+                        {new Date(ref.registrationDate || ref.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td>
                       {ref.status === "verified" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle2 size={12} />
-                          <span>Verified</span>
+                        <span className="admin-status-pill admin-status-approved">
+                          <CheckCircle2 size={11} style={{ marginRight: "4px" }} />
+                          Verified
                         </span>
                       ) : ref.status === "rejected" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                          <span>Rejected</span>
+                        <span className="admin-status-pill admin-status-rejected">
+                          Rejected
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                          <Clock size={12} />
-                          <span>Pending Verification</span>
+                        <span className="admin-status-pill admin-status-pending">
+                          <Clock size={11} style={{ marginRight: "4px" }} />
+                          Pending Review
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td style={{ textAlign: "right" }}>
                       {ref.status === "verified" ? (
                         <div>
-                          <span className="font-extrabold text-emerald-700 text-xs">
+                          <span style={{ fontWeight: "700", color: "#15845f", fontSize: "11px" }}>
                             ₹{ref.commissionEarned || 0}
                           </span>
                           {ref.commissionTierLabel && (
-                            <div className="text-[10px] text-gray-400">
+                            <div style={{ fontSize: "9px", color: "#9194a5" }}>
                               {ref.commissionTierLabel}
                             </div>
                           )}
                         </div>
                       ) : ref.status === "rejected" ? (
-                        <span className="text-gray-400 text-[11px]">—</span>
+                        <span style={{ color: "#a8aab8", fontSize: "11px" }}>—</span>
                       ) : (
-                        <span className="text-amber-600 text-[11px] font-medium">Pending Review</span>
+                        <span style={{ color: "#a2701f", fontSize: "10px", fontWeight: "500" }}>
+                          Pending Review
+                        </span>
                       )}
                     </td>
                   </tr>

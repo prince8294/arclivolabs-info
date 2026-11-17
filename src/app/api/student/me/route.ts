@@ -1,4 +1,3 @@
-import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { ApiError, apiSuccess, withApiErrors } from "@/lib/api-response";
 import { requireRole } from "@/lib/permissions";
@@ -7,13 +6,15 @@ import { readJson, validateMutationOrigin } from "@/lib/request";
 import Student from "@/models/Student";
 import StudentReferral from "@/models/StudentReferral";
 import StudentPayment from "@/models/StudentPayment";
-import User from "@/models/User";
+import { passwordSchema } from "@/lib/validations/auth";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { changeUserPassword } from "@/services/auth.service";
 
 const updateProfileSchema = z.object({
   phone: z.string().trim().max(32).optional().or(z.literal("")),
   institution: z.string().trim().max(200).optional().or(z.literal("")),
   currentPassword: z.string().min(1).optional(),
-  newPassword: z.string().min(6, "New password must be at least 6 characters.").max(100).optional(),
+  newPassword: passwordSchema.optional(),
 }).strict();
 
 export const GET = withApiErrors(async () => {
@@ -99,19 +100,8 @@ export const PUT = withApiErrors(async (request) => {
       throw new ApiError("Current password is required to set a new password.", 400);
     }
 
-    const userRecord = await User.findById(user._id).select("+passwordHash");
-    if (!userRecord) {
-      throw new ApiError("User not found.", 404);
-    }
-
-    const isMatch = await bcrypt.compare(body.currentPassword, userRecord.passwordHash);
-    if (!isMatch) {
-      throw new ApiError("Current password is incorrect.", 400);
-    }
-
-    userRecord.passwordHash = await bcrypt.hash(body.newPassword, 12);
-    userRecord.sessionVersion = (userRecord.sessionVersion || 0) + 1;
-    await userRecord.save();
+    await enforceRateLimit({ scope: "student-password-change", identity: user.id, limit: 5, windowMs: 15 * 60 * 1000 });
+    await changeUserPassword(user.id, body.currentPassword, body.newPassword);
   }
 
   await student.save();

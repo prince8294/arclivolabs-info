@@ -6,12 +6,14 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  ExternalLink,
   GraduationCap,
   Key,
   Lock,
   Phone,
   ShieldCheck,
   UserRound,
+  X,
 } from "lucide-react";
 
 type ProfileData = {
@@ -29,7 +31,7 @@ export function StudentProfile() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [notice, setNotice] = useState("");
 
   // Edit fields
   const [phone, setPhone] = useState("");
@@ -43,6 +45,7 @@ export function StudentProfile() {
   const [savingPassword, setSavingPassword] = useState(false);
 
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
@@ -68,14 +71,30 @@ export function StudentProfile() {
     if (!profile) return;
     navigator.clipboard.writeText(profile.referralCode);
     setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    setNotice("Referral code copied to clipboard!");
+    setTimeout(() => {
+      setCopiedCode(false);
+      setNotice("");
+    }, 2500);
+  }
+
+  function copyLink() {
+    if (!profile) return;
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://arclivolabs.com";
+    navigator.clipboard.writeText(`${origin}/join-as-creator/${profile.referralCode}`);
+    setCopiedLink(true);
+    setNotice("Creator registration link copied to clipboard!");
+    setTimeout(() => {
+      setCopiedLink(false);
+      setNotice("");
+    }, 2500);
   }
 
   async function handleSaveContact(e: React.FormEvent) {
     e.preventDefault();
     setSavingContact(true);
     setError("");
-    setSuccess("");
+    setNotice("");
     try {
       const res = await fetch("/api/student/me", {
         method: "PUT",
@@ -87,8 +106,8 @@ export function StudentProfile() {
       if (!res.ok || !json.success) {
         throw new Error(json.message || "Failed to update profile.");
       }
-      setSuccess("Contact details updated successfully.");
-      setTimeout(() => setSuccess(""), 4000);
+      setNotice("Contact & institution details updated successfully.");
+      setTimeout(() => setNotice(""), 4000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error saving profile.");
     } finally {
@@ -102,14 +121,15 @@ export function StudentProfile() {
       setError("New password and confirmation do not match.");
       return;
     }
-    if (newPassword.length < 6) {
-      setError("New password must be at least 6 characters.");
+    if (newPassword.length < 12 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword)
+      || !/[0-9]/.test(newPassword) || !/[^A-Za-z0-9]/.test(newPassword)) {
+      setError("Use at least 12 characters with upper- and lowercase letters, a number, and a symbol.");
       return;
     }
 
     setSavingPassword(true);
     setError("");
-    setSuccess("");
+    setNotice("");
     try {
       const res = await fetch("/api/student/me", {
         method: "PUT",
@@ -121,11 +141,11 @@ export function StudentProfile() {
       if (!res.ok || !json.success) {
         throw new Error(json.message || "Failed to update password.");
       }
-      setSuccess("Password changed successfully.");
+      setNotice("Password changed successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setTimeout(() => setSuccess(""), 4000);
+      setTimeout(() => setNotice(""), 4000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error changing password.");
     } finally {
@@ -135,225 +155,298 @@ export function StudentProfile() {
 
   if (loading) {
     return (
-      <div className="py-20 text-center text-gray-400">
-        <div className="w-8 h-8 border-2 border-[#7459d2] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-xs">Loading profile…</p>
+      <div className="admin-panel admin-empty-state" style={{ minHeight: "320px" }}>
+        <div
+          style={{
+            width: "28px",
+            height: "28px",
+            border: "2px solid #7359d2",
+            borderTopColor: "transparent",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+            marginBottom: "12px",
+          }}
+        />
+        <b>Loading student profile…</b>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
-        <p className="font-semibold">Unable to load profile data.</p>
+      <div className="admin-inline-error" role="alert">
+        <span>Unable to load profile data.</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Header */}
-      <div>
-        <span className="text-xs font-bold tracking-widest text-[#7459d2] uppercase block mb-1">
-          Account Settings
-        </span>
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Student Profile</h1>
-        <p className="text-xs sm:text-sm text-gray-500 mt-1">
-          Review your student credentials, referral code, and update your password.
-        </p>
+      <div className="admin-page-heading">
+        <div>
+          <span className="admin-eyebrow">AMBASSADOR ACCOUNT & SETTINGS</span>
+          <h1>Student Profile</h1>
+          <p>
+            Review your student identity credentials, referral code, contact details, and update your portal password.
+          </p>
+        </div>
+
+        <div className="admin-heading-actions">
+          <button
+            type="button"
+            onClick={copyCode}
+            className="admin-button admin-button-secondary"
+          >
+            {copiedCode ? <Check size={14} style={{ color: "#168d65" }} /> : <Copy size={13} />}
+            <span>Code: <strong style={{ fontFamily: "monospace" }}>{profile.referralCode}</strong></span>
+          </button>
+
+          <button
+            type="button"
+            onClick={copyLink}
+            className="admin-button"
+          >
+            {copiedLink ? <Check size={14} /> : <ExternalLink size={14} />}
+            <span>{copiedLink ? "Link Copied!" : "Copy Registration Link"}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Global Notices */}
-      {success && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2">
-          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{success}</span>
-        </div>
+      {/* Global Alerts */}
+      {notice && (
+        <p className="admin-toast" role="status">
+          {notice}
+          <button onClick={() => setNotice("")} aria-label="Dismiss notice">
+            <X size={14} />
+          </button>
+        </p>
       )}
       {error && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
-          <AlertCircle size={16} className="text-rose-600 shrink-0" />
-          <span>{error}</span>
+        <div className="admin-inline-error" role="alert">
+          {error}
+          <button onClick={() => setError("")} aria-label="Dismiss error">
+            <X size={14} />
+          </button>
         </div>
       )}
 
       {/* Student Identity Card */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#9075ec] to-[#50417d] text-white font-serif text-2xl font-bold flex items-center justify-center shrink-0 shadow-xs">
-            {profile.name.charAt(0).toUpperCase()}
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-gray-900">{profile.name}</h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                Active Ambassador
-              </span>
+      <div className="admin-panel admin-panel-padding">
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "18px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                display: "grid",
+                placeItems: "center",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #7257ce 0%, #4a3791 100%)",
+                color: "white",
+                fontFamily: "var(--admin-font-serif, Georgia, serif)",
+                fontSize: "24px",
+                boxShadow: "0 4px 12px rgba(114, 87, 206, 0.2)",
+                flexShrink: 0,
+              }}
+            >
+              {profile.name.charAt(0).toUpperCase()}
             </div>
-            <p className="text-xs text-gray-500">{profile.email}</p>
-            <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
-              <span className="text-gray-400 font-mono">
-                Student ID: <b className="text-gray-800 font-mono">{profile.studentId}</b>
-              </span>
-              <span className="text-gray-300">•</span>
-              <span className="text-gray-400">
-                Joined:{" "}
-                <b className="text-gray-800">
-                  {new Date(profile.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </b>
-              </span>
-            </div>
-          </div>
 
-          <div className="sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-xl border border-purple-200">
-              <div>
-                <div className="text-[10px] uppercase font-bold text-[#7459d2]">Referral Code</div>
-                <div className="font-mono text-base font-extrabold text-[#7459d2]">{profile.referralCode}</div>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#25273a", margin: 0 }}>
+                  {profile.name}
+                </h2>
+                <span className="admin-status-pill admin-status-approved">
+                  <CheckCircle2 size={10} style={{ marginRight: "3px" }} />
+                  Active Ambassador
+                </span>
               </div>
-              <button
-                type="button"
-                onClick={copyCode}
-                className="ml-2 p-2 rounded-lg bg-white hover:bg-purple-100 text-[#7459d2] border border-purple-200 transition-colors"
-                title="Copy referral code"
-              >
-                {copiedCode ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-              </button>
-            </div>
 
+              <p style={{ margin: "3px 0 0", fontSize: "11px", color: "#838699" }}>
+                {profile.email}
+              </p>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "6px", fontSize: "10.5px", color: "#9295a6" }}>
+                <span>
+                  Student ID: <b style={{ color: "#36384a", fontFamily: "monospace" }}>{profile.studentId}</b>
+                </span>
+                <span>•</span>
+                <span>
+                  Member since:{" "}
+                  <b style={{ color: "#36384a" }}>
+                    {new Date(profile.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </b>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Code Badge */}
+          <div
+            style={{
+              padding: "10px 14px",
+              background: "#faf9ff",
+              border: "1px solid #e7e2fa",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <div>
+              <span style={{ fontSize: "8.5px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.12em", color: "#7257ce", display: "block" }}>
+                Referral Code
+              </span>
+              <strong style={{ fontFamily: "monospace", fontSize: "15px", color: "#7257ce", letterSpacing: "0.06em" }}>
+                {profile.referralCode}
+              </strong>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                const link = `${window.location.origin}/join-as-creator/${profile.referralCode}`;
-                navigator.clipboard.writeText(link);
-                setSuccess("Personal registration link copied to clipboard!");
-                setTimeout(() => setSuccess(""), 3000);
-              }}
-              className="px-3.5 py-2 text-xs font-semibold text-white bg-[#7459d2] hover:bg-[#6247bf] rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5"
+              onClick={copyCode}
+              className="admin-small-button"
+              title="Copy referral code"
             >
-              <Copy size={13} />
-              <span>Copy Registration Link</span>
+              {copiedCode ? <Check size={12} style={{ color: "#168d65" }} /> : <Copy size={12} />}
+              <span>Copy</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Forms Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
         {/* Contact Info Form */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <UserRound size={16} className="text-[#7459d2]" />
-            <h3 className="text-sm font-bold text-gray-900">Contact & Education Details</h3>
+        <div className="admin-panel admin-panel-padding">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+            <UserRound size={15} style={{ color: "#7257ce" }} />
+            <h3 style={{ fontSize: "13px", fontWeight: "650", color: "#25273a", margin: 0 }}>
+              Contact & Education Details
+            </h3>
           </div>
 
-          <form onSubmit={handleSaveContact} className="space-y-4 text-xs">
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Full Name</label>
+          <form onSubmit={handleSaveContact} className="admin-form-grid" style={{ gap: "12px" }}>
+            <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+              <span>Full Name</span>
               <input
                 type="text"
                 disabled
                 value={profile.name}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+                style={{ background: "#f8f8fa", color: "#8a8d9f", cursor: "not-allowed" }}
               />
-              <p className="text-[10px] text-gray-400 mt-1">Name can only be modified by administration.</p>
-            </div>
+              <small style={{ color: "#9da0b1", fontSize: "9.5px", marginTop: "3px" }}>
+                Name can only be modified by agency administration.
+              </small>
+            </label>
 
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Email Address</label>
+            <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+              <span>Email Address</span>
               <input
                 type="email"
                 disabled
                 value={profile.email}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 cursor-not-allowed"
+                style={{ background: "#f8f8fa", color: "#8a8d9f", cursor: "not-allowed" }}
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-gray-700 font-semibold mb-1">Phone Number</label>
+            <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+              <span>Phone / WhatsApp Number</span>
               <input
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98765 43210"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7459d2]/20 focus:border-[#7459d2]"
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-gray-700 font-semibold mb-1">Institution / College</label>
+            <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+              <span>Institution / College</span>
               <input
                 type="text"
                 value={institution}
                 onChange={(e) => setInstitution(e.target.value)}
                 placeholder="e.g. IIT Delhi / Delhi University"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7459d2]/20 focus:border-[#7459d2]"
               />
-            </div>
+            </label>
 
-            <div className="pt-2">
+            <div style={{ gridColumn: "1 / -1", paddingTop: "6px" }}>
               <button
                 type="submit"
                 disabled={savingContact}
-                className="px-4 py-2 bg-[#7459d2] hover:bg-[#6247bf] text-white font-semibold rounded-lg shadow-xs transition-colors disabled:opacity-50"
+                className="admin-button"
               >
-                {savingContact ? "Saving…" : "Save Contact Info"}
+                {savingContact ? "Saving Details…" : "Save Contact Info"}
               </button>
             </div>
           </form>
         </div>
 
         {/* Change Password Form */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Lock size={16} className="text-[#7459d2]" />
-            <h3 className="text-sm font-bold text-gray-900">Change Password</h3>
+        <div className="admin-panel admin-panel-padding">
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+            <Lock size={15} style={{ color: "#7257ce" }} />
+            <h3 style={{ fontSize: "13px", fontWeight: "650", color: "#25273a", margin: 0 }}>
+              Change Security Password
+            </h3>
           </div>
 
-          <form onSubmit={handleChangePassword} className="space-y-4 text-xs">
-            <div>
-              <label className="block text-gray-700 font-semibold mb-1">Current Password</label>
+          <form onSubmit={handleChangePassword} className="admin-form-grid" style={{ gap: "12px" }}>
+            <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+              <span>Current Password *</span>
               <input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Enter current password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7459d2]/20 focus:border-[#7459d2]"
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-gray-700 font-semibold mb-1">New Password</label>
+            <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+              <span>New Password *</span>
               <input
                 type="password"
                 required
+                autoComplete="new-password"
+                minLength={12}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimum 6 characters"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7459d2]/20 focus:border-[#7459d2]"
+                placeholder="12+ characters, number & symbol"
               />
-            </div>
+            </label>
 
-            <div>
-              <label className="block text-gray-700 font-semibold mb-1">Confirm New Password</label>
+            <label className="admin-form-field" style={{ gridColumn: "1 / -1" }}>
+              <span>Confirm New Password *</span>
               <input
                 type="password"
                 required
+                autoComplete="new-password"
+                minLength={12}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Re-type new password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7459d2]/20 focus:border-[#7459d2]"
+                placeholder="Re-enter new password"
               />
-            </div>
+            </label>
 
-            <div className="pt-2">
+            <div style={{ gridColumn: "1 / -1", paddingTop: "6px" }}>
               <button
                 type="submit"
                 disabled={savingPassword}
-                className="px-4 py-2 bg-gray-900 hover:bg-black text-white font-semibold rounded-lg shadow-xs transition-colors disabled:opacity-50"
+                className="admin-button"
               >
                 {savingPassword ? "Updating Password…" : "Update Password"}
               </button>
@@ -364,4 +457,3 @@ export function StudentProfile() {
     </div>
   );
 }
-

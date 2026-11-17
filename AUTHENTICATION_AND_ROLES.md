@@ -1,6 +1,6 @@
 # Authentication and roles
 
-Auth.js Credentials uses HTTP-only, same-site session cookies. Passwords are bcrypt-hashed. Public registration permits brand and creator roles only. Verification and password-reset tokens are single-use and expire; changing a password invalidates existing sessions.
+Auth.js Credentials uses HTTP-only, same-site session cookies and the production cookie uses the `__Host-` prefix. Passwords are bcrypt-hashed and must be at least 12 characters with upper- and lowercase letters, a number, and a symbol. Public registration permits brand and creator roles only, and those roles cannot sign in until their email is verified. Verification and password-reset tokens are single-use and expire; changing a password invalidates existing sessions and outstanding reset tokens.
 
 ## Role boundaries
 

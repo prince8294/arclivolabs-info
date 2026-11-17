@@ -15,6 +15,7 @@ import {
   UserCheck,
   Users,
   Wallet,
+  X,
 } from "lucide-react";
 import { formatINR } from "@/lib/student-utils";
 
@@ -76,6 +77,7 @@ export function StudentOverview() {
   const [referrals, setReferrals] = useState<ReferralItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
@@ -108,308 +110,312 @@ export function StudentOverview() {
 
   if (loading) {
     return (
-      <div className="py-20 text-center text-gray-400">
-        <div className="w-8 h-8 border-2 border-[#7459d2] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-xs font-medium">Loading your student dashboard…</p>
+      <div className="admin-empty-state" style={{ minHeight: "360px" }}>
+        <div
+          style={{
+            width: "28px",
+            height: "28px",
+            border: "2px solid #7359d2",
+            borderTopColor: "transparent",
+            borderRadius: "50%",
+            animation: "spin 0.8s linear infinite",
+            marginBottom: "12px",
+          }}
+        />
+        <b>Loading your ambassador dashboard…</b>
+        <p style={{ margin: "4px 0 0", fontSize: "11px", color: "#8a8d9e" }}>
+          Synchronizing referral network metrics and live balances.
+        </p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800">
-        <p className="font-semibold">Unable to load dashboard</p>
-        <p className="mt-1">{error || "Please refresh the page."}</p>
+      <div className="admin-inline-error" role="alert">
+        <span>{error || "Unable to load dashboard. Please refresh the page."}</span>
+        <button onClick={() => setError("")} aria-label="Dismiss error">
+          <X size={14} />
+        </button>
       </div>
     );
   }
 
   const { student, stats } = data;
   const origin = typeof window !== "undefined" ? window.location.origin : "https://arclivolabs.com";
-  // Personal creator registration link: https://arclivolabs.com/join-as-creator/[referralCode]
   const referralLink = `${origin}/join-as-creator/${student.referralCode}`;
 
   function copyCode() {
     navigator.clipboard.writeText(student.referralCode);
     setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    setNotice("Referral code copied to clipboard!");
+    setTimeout(() => {
+      setCopiedCode(false);
+      setNotice("");
+    }, 2500);
   }
 
   function copyLink() {
     navigator.clipboard.writeText(referralLink);
     setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    setNotice("Personal creator registration link copied to clipboard!");
+    setTimeout(() => {
+      setCopiedLink(false);
+      setNotice("");
+    }, 2500);
   }
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-[#171828] to-[#252844] rounded-2xl p-6 sm:p-8 text-white shadow-sm relative overflow-hidden">
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#9075ec]/20 border border-[#9075ec]/30 text-[11px] font-semibold text-[#c7b8ff] mb-3">
-            <Sparkles size={13} />
-            <span>Campus Ambassador Dashboard</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Welcome back, {student.name.split(" ")[0]}!
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-300 mt-2 leading-relaxed">
-            Reach out to creators on Instagram, invite them with your unique referral code or link, and monitor your
-            referrals and verified earnings in real time.
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
+      {/* Page Heading */}
+      <div className="admin-page-heading">
+        <div>
+          <span className="admin-eyebrow">CAMPUS AMBASSADOR ECOSYSTEM</span>
+          <h1>Welcome, {student.name.split(" ")[0]}</h1>
+          <p>
+            Connect with creators on Instagram, share your personal referral link or code ({student.referralCode}), and track approvals, verified commissions, and earnings in real time.
           </p>
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Link
-              href="/student/dm-templates"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#7459d2] hover:bg-[#6247bf] text-white text-xs font-semibold rounded-lg transition-colors shadow-xs"
-            >
-              <MessageSquareText size={15} />
-              <span>Browse Outreach DM Templates</span>
-              <ArrowRight size={13} />
-            </Link>
-            <div className="text-[11px] text-gray-400 font-mono">
-              Student ID: <span className="text-white font-semibold">{student.studentId}</span>
-            </div>
-          </div>
         </div>
 
-        {/* Decorative background shape */}
-        <div className="absolute right-0 bottom-0 translate-x-10 translate-y-10 w-72 h-72 rounded-full bg-gradient-to-br from-[#7459d2]/20 to-transparent pointer-events-none" />
-      </div>
+        <div className="admin-heading-actions">
+          {/* Quick Code Pill */}
+          <button
+            type="button"
+            onClick={copyCode}
+            className="admin-button admin-button-secondary"
+            title="Click to copy code"
+          >
+            {copiedCode ? <Check size={14} style={{ color: "#168d65" }} /> : <Copy size={13} />}
+            <span>Code: <strong style={{ fontFamily: "monospace", letterSpacing: "0.05em" }}>{student.referralCode}</strong></span>
+          </button>
 
-      {/* Referral Link & Code Sharing Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-              Your Personal Creator Registration Link
-            </span>
-            <h2 className="text-sm font-bold text-gray-800 mt-0.5">Share with Instagram Creators</h2>
-            <p className="text-xs text-gray-500 mt-1">
-              Give creators this link or referral code during outreach conversations. The code is captured automatically.
-            </p>
-          </div>
+          {/* Share Link Button */}
+          <button
+            type="button"
+            onClick={copyLink}
+            className="admin-button"
+          >
+            {copiedLink ? <Check size={14} /> : <ExternalLink size={14} />}
+            <span>{copiedLink ? "Link Copied!" : "Copy Registration Link"}</span>
+          </button>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Referral Code Box */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
-              <div className="text-left">
-                <div className="text-[9px] font-bold text-[#7459d2] uppercase tracking-wider">Referral Code</div>
-                <div className="font-mono text-sm font-extrabold text-[#7459d2]">{student.referralCode}</div>
-              </div>
-              <button
-                type="button"
-                onClick={copyCode}
-                className="ml-2 p-1.5 rounded-md hover:bg-purple-100 text-[#7459d2] transition-colors"
-                title="Copy code"
-              >
-                {copiedCode ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-              </button>
-            </div>
-
-            {/* Share Link Button */}
-            <button
-              type="button"
-              onClick={copyLink}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-300 rounded-lg transition-colors"
-            >
-              {copiedLink ? <Check size={14} className="text-emerald-600" /> : <ExternalLink size={14} />}
-              <span>{copiedLink ? "Link Copied!" : "Copy Registration Link"}</span>
-            </button>
-          </div>
+          {/* DM Templates Shortcut */}
+          <Link
+            href="/student/dm-templates"
+            className="admin-button admin-button-secondary"
+          >
+            <MessageSquareText size={14} />
+            <span>Outreach DM Templates</span>
+          </Link>
         </div>
       </div>
 
-      {/* Required 4 Overview Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Global Toast / Notice */}
+      {notice && (
+        <p className="admin-toast" role="status">
+          {notice}
+          <button onClick={() => setNotice("")} aria-label="Dismiss notice">
+            <X size={14} />
+          </button>
+        </p>
+      )}
+
+      {/* 4 Primary KPI Cards */}
+      <div className="admin-kpi-grid">
         {/* 1. Total Creators Referred */}
         <Link
           href="/student/creators-referred"
-          className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs hover:border-[#7459d2]/40 hover:shadow-sm transition-all group"
+          className="admin-kpi-card admin-kpi-link"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Total Creators Referred</span>
-            <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Users size={19} />
-            </div>
+          <div className="admin-kpi-icon admin-tone-violet">
+            <Users size={16} />
           </div>
-          <div className="text-3xl font-extrabold text-gray-900 mt-2">
-            {stats.totalCreatorsReferred}
-          </div>
-          <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-            <span>All signups using your link</span>
-            <ArrowRight size={10} className="text-gray-300 group-hover:text-indigo-600 ml-auto" />
-          </p>
+          <span className="admin-kpi-label">TOTAL CREATORS REFERRED</span>
+          <div className="admin-kpi-value">{stats.totalCreatorsReferred}</div>
+          <span className="admin-kpi-sub">All creator registrations via your link</span>
+          <ArrowRight size={13} className="admin-card-arrow" />
         </Link>
 
         {/* 2. Verified Creators */}
         <Link
           href="/student/verified-creators"
-          className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs hover:border-emerald-400 hover:shadow-sm transition-all group"
+          className="admin-kpi-card admin-kpi-link"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Verified Creators</span>
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <UserCheck size={19} />
-            </div>
+          <div className="admin-kpi-icon admin-tone-green">
+            <UserCheck size={16} />
           </div>
-          <div className="text-3xl font-extrabold text-emerald-600 mt-2">
+          <span className="admin-kpi-label">VERIFIED CREATORS</span>
+          <div className="admin-kpi-value" style={{ color: "#15845f" }}>
             {stats.verifiedCreators}
           </div>
-          <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-            <span>Reviewed & approved by agency</span>
-            <ArrowRight size={10} className="text-gray-300 group-hover:text-emerald-600 ml-auto" />
-          </p>
+          <span className="admin-kpi-sub">Approved & confirmed by agency</span>
+          <ArrowRight size={13} className="admin-card-arrow" />
         </Link>
 
         {/* 3. Pending Verification */}
         <Link
           href="/student/pending-verification"
-          className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs hover:border-amber-400 hover:shadow-sm transition-all group"
+          className="admin-kpi-card admin-kpi-link"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Pending Verification</span>
-            <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Clock size={19} />
-            </div>
+          <div className="admin-kpi-icon admin-tone-amber">
+            <Clock size={16} />
           </div>
-          <div className="text-3xl font-extrabold text-amber-600 mt-2">
+          <span className="admin-kpi-label">PENDING VERIFICATION</span>
+          <div className="admin-kpi-value" style={{ color: "#a2701f" }}>
             {stats.pendingVerification}
           </div>
-          <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-            <span>Under onboarding review</span>
-            <ArrowRight size={10} className="text-gray-300 group-hover:text-amber-600 ml-auto" />
-          </p>
+          <span className="admin-kpi-sub">Under quality and follower review</span>
+          <ArrowRight size={13} className="admin-card-arrow" />
         </Link>
 
-        {/* 4. Total Earnings */}
+        {/* 4. Total Approved Earnings */}
         <Link
           href="/student/earnings"
-          className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs hover:border-[#7459d2]/40 hover:shadow-sm transition-all group"
+          className="admin-kpi-card admin-kpi-link"
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Total Earnings</span>
-            <div className="w-10 h-10 rounded-lg bg-purple-50 text-[#7459d2] flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Wallet size={19} />
-            </div>
+          <div className="admin-kpi-icon admin-tone-blue">
+            <Wallet size={16} />
           </div>
-          <div className="text-3xl font-extrabold text-[#7459d2] mt-2">
+          <span className="admin-kpi-label">TOTAL APPROVED EARNINGS</span>
+          <div className="admin-kpi-value">
             {formatINR(stats.totalEarnings)}
           </div>
-          <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
-            <span>Approved referral commissions</span>
-            <ArrowRight size={10} className="text-gray-300 group-hover:text-[#7459d2] ml-auto" />
-          </p>
+          <span className="admin-kpi-sub">Referral commissions credited</span>
+          <ArrowRight size={13} className="admin-card-arrow" />
         </Link>
       </div>
 
-      {/* Real-time Referred Creators List */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+      {/* Table Panel: Referred Creators */}
+      <div className="admin-panel admin-table-panel">
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #e8e9ef",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+          }}
+        >
           <div>
-            <h3 className="text-sm font-bold text-gray-900">Your Referred Creators</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Creators who registered using your unique referral link ({referrals.length} total).
+            <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#292b3e", margin: 0 }}>
+              Recent Referred Creators
+            </h2>
+            <p style={{ fontSize: "11px", color: "#85889d", margin: "4px 0 0" }}>
+              Creators who registered using your unique referral link ({referrals.length} total signups).
             </p>
           </div>
+
           <Link
             href="/student/creators-referred"
-            className="text-xs font-semibold text-[#7459d2] hover:underline inline-flex items-center gap-1"
+            className="admin-text-link"
           >
-            <span>View All</span>
+            <span>View All Referrals</span>
             <ArrowRight size={12} />
           </Link>
         </div>
 
         {referrals.length === 0 ? (
-          <div className="py-12 px-4 text-center">
-            <Users size={32} className="mx-auto mb-2 text-gray-300" />
-            <h4 className="text-xs font-bold text-gray-700">No referred creators yet</h4>
-            <p className="text-xs text-gray-400 max-w-sm mx-auto mt-1">
-              Start sharing your referral link with creators on Instagram using the ready-to-use DM templates!
+          <div className="admin-empty-state">
+            <Users size={32} style={{ color: "#c4c7d6", marginBottom: "8px" }} />
+            <b>No creator referrals recorded yet</b>
+            <p style={{ margin: "5px 0 16px", fontSize: "11px", color: "#8b8fa2", maxWidth: "420px" }}>
+              Start reaching out to Instagram creators using our proven outreach DM templates. When creators sign up with your link, their profiles will appear here instantly.
             </p>
-            <div className="mt-4">
-              <Link
-                href="/student/dm-templates"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#7459d2] bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
-              >
-                <span>Browse Outreach DM Templates</span>
-                <ArrowRight size={12} />
-              </Link>
-            </div>
+            <Link href="/student/dm-templates" className="admin-button">
+              <MessageSquareText size={14} />
+              <span>Browse 20+ Outreach DM Templates</span>
+            </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px] font-bold">
-                  <th className="py-3 px-4">Instagram Creator</th>
-                  <th className="py-3 px-4">Followers</th>
-                  <th className="py-3 px-4">Registration Date</th>
-                  <th className="py-3 px-4">Verification Status</th>
-                  <th className="py-3 px-4 text-right">Commission</th>
+                <tr>
+                  <th>INSTAGRAM CREATOR</th>
+                  <th>VERIFIED FOLLOWERS</th>
+                  <th>REGISTRATION DATE</th>
+                  <th>STATUS</th>
+                  <th style={{ textAlign: "right" }}>COMMISSION</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
-                {referrals.slice(0, 5).map((ref) => (
-                  <tr key={ref._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-900">{ref.creatorName}</div>
-                      <div className="text-[#7459d2] font-mono text-[11px] flex items-center gap-1 mt-0.5">
-                        <InstagramIcon size={11} />
-                        <span>@{ref.creatorHandle}</span>
+              <tbody>
+                {referrals.slice(0, 6).map((ref) => (
+                  <tr key={ref._id}>
+                    <td>
+                      <div>
+                        <span className="admin-primary-cell">{ref.creatorName}</span>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            fontFamily: "monospace",
+                            color: "#7257ce",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            marginTop: "2px",
+                          }}
+                        >
+                          <InstagramIcon size={11} />
+                          <span>@{ref.creatorHandle}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-900">
+                    <td>
+                      <div style={{ fontWeight: "600", color: "#2d3043" }}>
                         {(ref.confirmedFollowers ?? ref.followers ?? 0).toLocaleString()}
                       </div>
                       {ref.confirmedFollowers !== undefined && ref.confirmedFollowers !== ref.followers && (
-                        <div className="text-[10px] text-gray-400">
+                        <div style={{ fontSize: "9px", color: "#9598a8" }}>
                           Applied: {(ref.followers ?? 0).toLocaleString()}
                         </div>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-500">
-                      {new Date(ref.registrationDate || ref.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                    <td>
+                      <span style={{ color: "#676a7c" }}>
+                        {new Date(ref.registrationDate || ref.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td>
                       {ref.status === "verified" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle2 size={12} />
-                          <span>Verified</span>
+                        <span className="admin-status-pill admin-status-approved">
+                          <CheckCircle2 size={11} style={{ marginRight: "4px" }} />
+                          Verified
                         </span>
                       ) : ref.status === "rejected" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                          <span>Rejected</span>
+                        <span className="admin-status-pill admin-status-rejected">
+                          Rejected
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                          <Clock size={12} />
-                          <span>Pending Verification</span>
+                        <span className="admin-status-pill admin-status-pending">
+                          <Clock size={11} style={{ marginRight: "4px" }} />
+                          Pending Review
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td style={{ textAlign: "right" }}>
                       {ref.status === "verified" ? (
                         <div>
-                          <span className="font-extrabold text-emerald-700 text-xs">
+                          <span style={{ fontWeight: "700", color: "#15845f", fontSize: "11px" }}>
                             ₹{ref.commissionEarned || 0}
                           </span>
                           {ref.commissionTierLabel && (
-                            <div className="text-[10px] text-gray-400">
+                            <div style={{ fontSize: "9px", color: "#9194a5" }}>
                               {ref.commissionTierLabel}
                             </div>
                           )}
                         </div>
                       ) : ref.status === "rejected" ? (
-                        <span className="text-gray-400 text-[11px]">—</span>
+                        <span style={{ color: "#a8aab8", fontSize: "11px" }}>—</span>
                       ) : (
-                        <span className="text-amber-600 text-[11px] font-medium">Pending Review</span>
+                        <span style={{ color: "#a2701f", fontSize: "10px", fontWeight: "500" }}>
+                          Pending Review
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -420,80 +426,66 @@ export function StudentOverview() {
         )}
       </div>
 
-      {/* Quick Action Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: DM Templates */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between">
+      {/* 3 Quick Action / Editorial Resource Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: "14px" }}>
+        {/* Card 1: Outreach Templates */}
+        <div className="admin-panel admin-panel-padding" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
-            <div className="w-9 h-9 rounded-lg bg-purple-50 text-[#7459d2] flex items-center justify-center mb-3">
-              <MessageSquareText size={18} />
+            <div className="admin-kpi-icon admin-tone-violet">
+              <MessageSquareText size={16} />
             </div>
-            <h3 className="text-sm font-bold text-gray-900">20+ Instagram DM Templates</h3>
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-              Tested, professional outreach messages for first-time pitches, follow-ups, and registration invites with your link.
+            <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#292b3e", margin: 0 }}>
+              20+ Instagram DM Templates
+            </h2>
+            <p className="admin-panel-description">
+              Hand-crafted, high-converting outreach messages for cold intros, brand sponsorship opportunities, follow-ups, and registration links.
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <Link
-              href="/student/dm-templates"
-              className="text-xs font-semibold text-[#7459d2] hover:underline inline-flex items-center gap-1"
-            >
-              <span>Explore Templates</span>
+          <div style={{ marginTop: "18px", paddingTop: "12px", borderTop: "1px solid #f0f1f5" }}>
+            <Link href="/student/dm-templates" className="admin-text-link">
+              <span>Explore outreach templates</span>
               <ArrowRight size={12} />
             </Link>
           </div>
         </div>
 
-        {/* Card 2: Outreach Checklist */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between">
+        {/* Card 2: Outreach Guidelines */}
+        <div className="admin-panel admin-panel-padding" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
-              <TrendingUp size={18} />
+            <div className="admin-kpi-icon admin-tone-green">
+              <TrendingUp size={16} />
             </div>
-            <h3 className="text-sm font-bold text-gray-900">Creator Outreach Best Practices</h3>
-            <ul className="text-xs text-gray-500 mt-2 space-y-1.5">
-              <li className="flex items-start gap-1.5">
-                <span className="text-emerald-500 font-bold">•</span>
-                <span>Target creators with 1k+ engaged followers.</span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <span className="text-emerald-500 font-bold">•</span>
-                <span>Personalize greeting with their creator name.</span>
-              </li>
-              <li className="flex items-start gap-1.5">
-                <span className="text-emerald-500 font-bold">•</span>
-                <span>Share your direct registration link.</span>
-              </li>
-            </ul>
+            <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#292b3e", margin: 0 }}>
+              Ambassador Guidelines
+            </h2>
+            <p className="admin-panel-description">
+              Send manual, personalized messages to creators with 1k+ real followers. Never use automated bot scrapers to protect account safety.
+            </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <Link
-              href="/student/support"
-              className="text-xs font-semibold text-emerald-600 hover:underline inline-flex items-center gap-1"
-            >
-              <span>Read Ambassador FAQ</span>
+          <div style={{ marginTop: "18px", paddingTop: "12px", borderTop: "1px solid #f0f1f5" }}>
+            <Link href="/student/support" className="admin-text-link">
+              <span>Read ambassador FAQs & guide</span>
               <ArrowRight size={12} />
             </Link>
           </div>
         </div>
 
-        {/* Card 3: Certificate Progress */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs flex flex-col justify-between">
+        {/* Card 3: Certificate */}
+        <div className="admin-panel admin-panel-padding" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
           <div>
-            <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-3">
-              <Sparkles size={18} />
+            <div className="admin-kpi-icon admin-tone-blue">
+              <Sparkles size={16} />
             </div>
-            <h3 className="text-sm font-bold text-gray-900">Ambassador Certificate</h3>
-            <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">
-              Earn your official ArclivoLabs Campus Ambassador Certificate of Excellence upon completing your outreach milestones.
+            <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#292b3e", margin: 0 }}>
+              Ambassador Certificate
+            </h2>
+            <p className="admin-panel-description">
+              Earn an official ArclivoLabs Campus Ambassador Certificate of Excellence upon achieving verified creator onboarding milestones.
             </p>
           </div>
-          <div className="mt-4 pt-3 border-t border-gray-100">
-            <Link
-              href="/student/certificate"
-              className="text-xs font-semibold text-indigo-600 hover:underline inline-flex items-center gap-1"
-            >
-              <span>View Certificate Status</span>
+          <div style={{ marginTop: "18px", paddingTop: "12px", borderTop: "1px solid #f0f1f5" }}>
+            <Link href="/student/certificate" className="admin-text-link">
+              <span>View credentials & certificate</span>
               <ArrowRight size={12} />
             </Link>
           </div>

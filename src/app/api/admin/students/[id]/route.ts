@@ -6,6 +6,8 @@ import { connectToDatabase } from "@/lib/db";
 import { validateMutationOrigin, readJson } from "@/lib/request";
 import Student from "@/models/Student";
 import User from "@/models/User";
+import PasswordResetToken from "@/models/PasswordResetToken";
+import { passwordSchema } from "@/lib/validations/auth";
 
 const updateStudentSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters.").max(120).optional(),
@@ -16,7 +18,7 @@ const updateStudentSchema = z.object({
   institution: z.string().trim().max(200).optional().or(z.literal("")),
   status: z.enum(["active", "deactivated"]).optional(),
   notes: z.string().trim().max(1000).optional().or(z.literal("")),
-  newPassword: z.string().min(6, "Password must be at least 6 characters.").max(100).optional().or(z.literal("")),
+  newPassword: passwordSchema.or(z.literal("")).optional(),
 }).strict();
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -47,6 +49,7 @@ export const PUT = withApiErrors(async (request: Request, { params }: RouteConte
   }
 
   const user = await User.findById(student.user);
+  let passwordChanged = false;
 
   // Validate email changes
   if (body.email && body.email.toLowerCase() !== student.email) {
@@ -106,14 +109,16 @@ export const PUT = withApiErrors(async (request: Request, { params }: RouteConte
   }
 
   // Handle password reset
-  if (body.newPassword && body.newPassword.trim().length >= 6) {
+  if (body.newPassword) {
     if (user) {
       user.passwordHash = await bcrypt.hash(body.newPassword, 12);
       user.sessionVersion = (user.sessionVersion || 0) + 1;
+      passwordChanged = true;
     }
   }
 
   if (user) await user.save();
+  if (user && passwordChanged) await PasswordResetToken.deleteMany({ user: user._id });
   await student.save();
 
   return apiSuccess(student, "Student details updated successfully.");

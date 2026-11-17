@@ -15,7 +15,7 @@ export const GET = withApiErrors(async (_request, context: RouteContext) => {
   if (!Types.ObjectId.isValid(id)) throw new ApiError("Creator was not found.", 404);
   await connectToDatabase();
   const creator = await Creator.findOne({ _id: id, approvalStatus: "approved" })
-    .select("fullName bio profileImage instagramUsername instagramUrl youtubeChannel youtubeUrl otherSocialPlatforms primaryPlatform contentCategories followers averageViews engagementRate location country languages portfolioUrl availability verificationStatus")
+    .select("fullName bio profileImage instagramUsername instagramUrl instagramWebsite instagramMedia youtubeChannel youtubeUrl otherSocialPlatforms primaryPlatform contentCategories followers followingCount postsCount averageViews averageLikes averageComments averageReelViews engagementRate analyzedReels viewsSampleSize engagementSampleSize metricsVerificationStatus metricsLastVerifiedAt lastProfileSyncAt lastMediaSyncAt profileImageLastSyncedAt location country languages portfolioUrl availability verificationStatus")
     .lean();
   if (!creator) throw new ApiError("Creator was not found.", 404);
   return apiSuccess({
@@ -26,14 +26,29 @@ export const GET = withApiErrors(async (_request, context: RouteContext) => {
       profileImage: creator.profileImage,
       instagramUsername: creator.instagramUsername,
       instagramUrl: creator.instagramUrl,
+      instagramWebsite: creator.instagramWebsite,
+      instagramMedia: creator.instagramMedia,
       youtubeChannel: creator.youtubeChannel,
       youtubeUrl: creator.youtubeUrl,
       otherSocialPlatforms: creator.otherSocialPlatforms,
       primaryPlatform: creator.primaryPlatform,
       contentCategories: creator.contentCategories,
       followers: creator.followers,
+      followingCount: creator.followingCount,
+      postsCount: creator.postsCount,
       averageViews: creator.averageViews,
+      averageLikes: creator.averageLikes,
+      averageComments: creator.averageComments,
+      averageReelViews: creator.averageReelViews,
       engagementRate: creator.engagementRate,
+      analyzedReels: creator.analyzedReels,
+      viewsSampleSize: creator.viewsSampleSize,
+      engagementSampleSize: creator.engagementSampleSize,
+      metricsVerificationStatus: creator.metricsVerificationStatus,
+      metricsLastVerifiedAt: creator.metricsLastVerifiedAt,
+      lastProfileSyncAt: creator.lastProfileSyncAt,
+      lastMediaSyncAt: creator.lastMediaSyncAt,
+      profileImageLastSyncedAt: creator.profileImageLastSyncedAt,
       location: creator.location,
       country: creator.country,
       languages: creator.languages,

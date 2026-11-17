@@ -6,11 +6,12 @@ import { connectToDatabase } from "@/lib/db";
 import { validateMutationOrigin, readJson } from "@/lib/request";
 import Student from "@/models/Student";
 import User from "@/models/User";
+import { passwordSchema } from "@/lib/validations/auth";
 
 const createStudentSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters.").max(120),
   email: z.string().trim().email("Invalid email address.").max(254),
-  password: z.string().min(6, "Password must be at least 6 characters.").max(100),
+  password: passwordSchema,
   studentId: z.string().trim().min(3, "Student ID must be at least 3 characters.").max(50).toUpperCase(),
   referralCode: z.string().trim().min(3, "Referral code must be at least 3 characters.").max(30).toUpperCase(),
   phone: z.string().trim().max(32).optional().or(z.literal("")),

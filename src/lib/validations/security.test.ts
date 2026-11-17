@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import bcrypt from "bcryptjs";
 import User from "@/models/User";
-import { registerSchema, updateUserSchema } from "@/lib/validations/auth";
+import { passwordSchema, registerSchema, updateUserSchema } from "@/lib/validations/auth";
 import { campaignCreateSchema, creatorProfileUpdateSchema } from "@/lib/validations/campaign";
 import { contactMessageSchema, creatorApplicationSchema, enquirySchema } from "@/lib/validations/public";
 import { campaignPortalSchema, creatorProfileSchema, shortlistUpdateSchema } from "@/lib/validations/portal";
+import { safeUrl } from "@/lib/validations/common";
+import { agencySettingsSchemaForUpdate, brandAdminSchema, creatorAdminSchema } from "@/lib/admin/resources";
 
 describe("authentication validation", () => {
   it("normalizes registration emails and only permits public account roles", () => {
@@ -37,6 +39,43 @@ describe("authentication validation", () => {
     expect(await bcrypt.compare(password, hash)).toBe(true);
     expect(User.schema.path("passwordHash").options.select).toBe(false);
     expect(User.schema.path("password")).toBeUndefined();
+  });
+
+  it("enforces the same strong password policy for every account flow", () => {
+    expect(passwordSchema.safeParse("A-secure-Password-123!").success).toBe(true);
+    expect(passwordSchema.safeParse("short1A!").success).toBe(false);
+    expect(passwordSchema.safeParse("alllowercase123!").success).toBe(false);
+    expect(passwordSchema.safeParse("NOLOWERCASE123!").success).toBe(false);
+    expect(passwordSchema.safeParse("NoNumbersHere!").success).toBe(false);
+    expect(passwordSchema.safeParse("NoSymbolsHere123").success).toBe(false);
+  });
+});
+
+describe("URL validation", () => {
+  it("only accepts HTTP and HTTPS URLs", () => {
+    expect(safeUrl.safeParse("https://example.com/profile").success).toBe(true);
+    expect(safeUrl.safeParse("http://localhost:3000/profile").success).toBe(true);
+    expect(safeUrl.safeParse("javascript:alert(1)").success).toBe(false);
+    expect(safeUrl.safeParse("data:text/html,<script>alert(1)</script>").success).toBe(false);
+    expect(safeUrl.safeParse("ftp://example.com/file").success).toBe(false);
+  });
+
+  it("applies safe URL rules to public and admin-managed links", () => {
+    expect(creatorProfileUpdateSchema.safeParse({ portfolioUrl: "javascript:alert(1)" }).success).toBe(false);
+    expect(updateUserSchema.safeParse({ profileImage: "data:image/svg+xml,<svg/>" }).success).toBe(false);
+    expect(creatorAdminSchema.safeParse({ instagramUrl: "javascript:alert(1)" }).success).toBe(false);
+    expect(brandAdminSchema.safeParse({
+      companyName: "Example Brand",
+      contactPerson: "Casey Doe",
+      email: "casey@example.com",
+      phone: "+1 555 123 4567",
+      website: "javascript:alert(1)",
+      industry: "Lifestyle",
+      description: "Example description",
+      location: "London",
+      country: "United Kingdom",
+    }).success).toBe(false);
+    expect(agencySettingsSchemaForUpdate.safeParse({ website: "data:text/html,unsafe" }).success).toBe(false);
   });
 });
 

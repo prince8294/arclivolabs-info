@@ -20,7 +20,7 @@ export const GET = withApiErrors(async (request) => {
   }
   if (query.search) {
     const search = new RegExp(escapeRegex(query.search), "i");
-    filters.$or = [{ fullName: search }, { contentCategories: search }, { location: search }];
+    filters.$or = [{ fullName: search }, { instagramUsername: search }, { contentCategories: search }, { location: search }, { languages: search }];
   }
   const sort: Record<string, SortOrder> = query.sort === "followers"
     ? { followers: -1 }
@@ -30,7 +30,7 @@ export const GET = withApiErrors(async (request) => {
 
   const [profiles, total] = await Promise.all([
     Creator.find(filters)
-      .select("fullName primaryPlatform contentCategories followers location profileImage featured isDemo instagramUsername bio languages engagementRate averageViews")
+      .select("fullName primaryPlatform contentCategories followers location profileImage featured isDemo instagramUsername bio languages engagementRate averageReelViews metricsVerificationStatus availability verificationStatus profileImageLastSyncedAt")
       .sort(sort)
       .skip((query.page - 1) * query.limit)
       .limit(query.limit)
@@ -52,7 +52,11 @@ export const GET = withApiErrors(async (request) => {
       bio: creator.bio,
       languages: creator.languages ?? [],
       engagementRate: creator.engagementRate ?? null,
-      averageReelViews: creator.averageViews ?? null,
+      averageReelViews: creator.averageReelViews ?? null,
+      metricsVerified: creator.metricsVerificationStatus === "verified",
+      availability: creator.availability,
+      verified: creator.verificationStatus === "verified",
+      profileImageLastSyncedAt: creator.profileImageLastSyncedAt?.toISOString() ?? null,
     })),
     pagination: { page: query.page, limit: query.limit, total, pages: Math.ceil(total / query.limit) },
   });

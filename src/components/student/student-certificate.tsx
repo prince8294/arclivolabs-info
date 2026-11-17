@@ -6,13 +6,11 @@ import {
   Award,
   Calendar,
   CheckCircle2,
-  Clock,
   Download,
-  ExternalLink,
-  FileText,
   HelpCircle,
-  ShieldCheck,
   Sparkles,
+  User,
+  X,
 } from "lucide-react";
 
 type CertificateItem = {
@@ -56,137 +54,241 @@ export function StudentCertificate() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-page-heading">
         <div>
-          <span className="text-xs font-bold tracking-widest text-[#7459d2] uppercase block mb-1">
-            Credentials & Honors
-          </span>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">My Certificate</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Verified ArclivoLabs Campus Ambassador certificates of excellence and completion.
+          <span className="admin-eyebrow">HONORS & CREDENTIALS</span>
+          <h1>My Certificate</h1>
+          <p>
+            Official ArclivoLabs Campus Ambassador certificates of excellence, leadership awards, and verified credentials.
           </p>
         </div>
 
-        <Link
-          href="/student/support"
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors shadow-xs shrink-0"
-        >
-          <HelpCircle size={14} />
-          <span>Certificate Inquiries</span>
-        </Link>
+        <div className="admin-heading-actions">
+          <Link
+            href="/student/support"
+            className="admin-button admin-button-secondary"
+          >
+            <HelpCircle size={14} />
+            <span>Certificate Inquiries</span>
+          </Link>
+        </div>
       </div>
 
+      {error && (
+        <div className="admin-inline-error" role="alert">
+          {error}
+          <button onClick={() => setError("")} aria-label="Dismiss error">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Program Information Notice */}
-      <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-xl text-xs text-indigo-950 flex items-start gap-3">
-        <Sparkles size={16} className="text-indigo-600 shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <p className="font-semibold text-indigo-950">Ambassador Credential Program:</p>
-          <p className="text-[11px] text-indigo-800 mt-0.5">
-            Certificates are issued manually by ArclivoLabs administration based on outreach milestones and verified creator referrals. Only verified, active certificates assigned to your account are accessible here.
+      <div
+        className="admin-panel admin-panel-padding"
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "12px",
+          background: "#fcfcff",
+          borderLeft: "3px solid #7257ce",
+        }}
+      >
+        <Sparkles size={16} style={{ color: "#7257ce", flexShrink: 0, marginTop: "2px" }} />
+        <div>
+          <b style={{ fontSize: "11px", color: "#2d3045" }}>Campus Ambassador Credential Program</b>
+          <p style={{ margin: "2px 0 0", fontSize: "10.5px", color: "#777a8e", lineHeight: "1.5" }}>
+            Certificates are issued and authenticated individually by ArclivoLabs executive administration based on outreach milestones and verified creator onboardings. Each certificate contains a unique verifiable credential ID.
           </p>
         </div>
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-16 text-center text-gray-400">
-          <div className="w-8 h-8 border-2 border-[#7459d2] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="text-xs">Loading certificate credentials…</p>
-        </div>
-      ) : error ? (
-        <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 text-center">
-          <p>{error}</p>
+        <div className="admin-panel admin-empty-state" style={{ minHeight: "280px" }}>
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              border: "2px solid #7359d2",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+              marginBottom: "12px",
+            }}
+          />
+          <b>Loading certificate credentials…</b>
         </div>
       ) : certificates.length === 0 ? (
-        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
-          <div className="w-14 h-14 rounded-full bg-purple-50 text-[#7459d2] flex items-center justify-center mx-auto mb-3">
-            <Award size={28} />
+        <div className="admin-panel admin-empty-state" style={{ minHeight: "320px", padding: "40px 24px" }}>
+          <div className="admin-kpi-icon admin-tone-violet" style={{ width: "42px", height: "42px", borderRadius: "50%", marginBottom: "14px" }}>
+            <Award size={22} />
           </div>
-          <h3 className="text-base font-bold text-gray-900">No Certificates Awarded Yet</h3>
-          <p className="text-xs text-gray-500 max-w-md mx-auto mt-1 leading-relaxed">
-            Certificates are not issued automatically upon signup. As you actively refer creators and achieve verification milestones, administration will upload and assign your official certificate.
+          <b style={{ fontSize: "15px" }}>No Certificates Awarded Yet</b>
+          <p style={{ margin: "6px 0 20px", fontSize: "11px", color: "#8a8e9f", maxWidth: "440px", lineHeight: "1.6" }}>
+            Ambassador certificates are not issued automatically upon signup. As you invite creators and achieve verification milestones, administration will issue and publish your personalized certificate of excellence here.
           </p>
-          <div className="mt-6 flex items-center justify-center gap-3">
-            <Link
-              href="/student/dm-templates"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#7459d2] hover:bg-[#6247bf] rounded-lg transition-colors shadow-xs"
-            >
-              <span>Explore DM Outreach Templates</span>
-            </Link>
-          </div>
+          <Link href="/student/dm-templates" className="admin-button">
+            <span>Explore DM Outreach Templates</span>
+          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "16px" }}>
           {certificates.map((cert) => (
             <div
               key={cert._id}
-              className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden flex flex-col justify-between hover:border-purple-300 transition-colors"
+              className="admin-panel"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                overflow: "hidden",
+              }}
             >
               {/* Certificate Top Banner */}
-              <div className="p-6 bg-gradient-to-br from-[#f8f6ff] to-[#ece7fc] border-b border-purple-100 flex items-start justify-between">
+              <div
+                style={{
+                  padding: "18px 20px",
+                  background: "linear-gradient(135deg, #faf9ff 0%, #f0edff 100%)",
+                  borderBottom: "1px solid #e7e2fa",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: "12px",
+                }}
+              >
                 <div>
-                  <span className="text-[10px] tracking-widest font-extrabold text-[#7459d2] uppercase block">
+                  <span
+                    style={{
+                      fontSize: "8.5px",
+                      fontWeight: "700",
+                      letterSpacing: "0.14em",
+                      textTransform: "uppercase",
+                      color: "#7257ce",
+                    }}
+                  >
                     OFFICIAL CREDENTIAL
                   </span>
-                  <h3 className="text-lg font-serif font-bold text-gray-900 mt-1">{cert.title}</h3>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-purple-200 text-[#6247bf] font-bold">
+                  <h3
+                    style={{
+                      margin: "4px 0 8px",
+                      fontFamily: "var(--admin-font-serif, Georgia, serif)",
+                      fontSize: "17px",
+                      fontWeight: "500",
+                      color: "#1e2030",
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    {cert.title}
+                  </h3>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <span
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "10px",
+                        fontWeight: "700",
+                        color: "#6044bf",
+                        background: "white",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        border: "1px solid #d9d2f8",
+                      }}
+                    >
                       {cert.certificateId}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      <CheckCircle2 size={10} />
-                      <span>Verified</span>
+
+                    <span className="admin-status-pill admin-status-approved">
+                      <CheckCircle2 size={10} style={{ marginRight: "3px" }} />
+                      Verified & Active
                     </span>
                   </div>
                 </div>
-                <div className="w-12 h-12 rounded-full bg-white text-[#7459d2] shadow-xs flex items-center justify-center shrink-0 border border-purple-100">
-                  <Award size={24} />
+
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: "50%",
+                    background: "white",
+                    border: "1px solid #dcd7f5",
+                    color: "#7257ce",
+                    boxShadow: "0 2px 6px rgba(114, 87, 206, 0.08)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Award size={18} />
                 </div>
               </div>
 
               {/* Certificate Details */}
-              <div className="p-6 space-y-4 flex-1 flex flex-col justify-between text-xs">
+              <div style={{ padding: "18px 20px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                 <div>
-                  <div className="text-gray-600 leading-relaxed text-[11px]">
+                  <p style={{ margin: "0 0 16px", fontSize: "11px", color: "#6c7083", lineHeight: "1.6" }}>
                     {cert.description ||
                       "Awarded for outstanding contribution, creator onboarding, and campus brand ambassador excellence with ArclivoLabs."}
-                  </div>
+                  </p>
 
-                  <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-100 mt-4 text-[11px]">
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "12px",
+                      paddingTop: "14px",
+                      borderTop: "1px solid #f0f1f5",
+                    }}
+                  >
                     <div>
-                      <span className="text-gray-400 block text-[10px] uppercase font-bold">
+                      <span style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: "700", color: "#9da0b1", display: "block" }}>
                         Issued To
                       </span>
-                      <span className="font-semibold text-gray-900">{studentName}</span>
-                      <span className="block text-[10px] text-gray-400 font-mono">{studentId}</span>
+                      <strong style={{ fontSize: "11.5px", color: "#25273a", display: "block", marginTop: "2px" }}>
+                        {studentName}
+                      </strong>
+                      <span style={{ fontSize: "9.5px", color: "#8e91a2", fontFamily: "monospace" }}>
+                        {studentId}
+                      </span>
                     </div>
+
                     <div>
-                      <span className="text-gray-400 block text-[10px] uppercase font-bold">
+                      <span style={{ fontSize: "9px", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: "700", color: "#9da0b1", display: "block" }}>
                         Issue Date
                       </span>
-                      <span className="font-semibold text-gray-900">
+                      <strong style={{ fontSize: "11.5px", color: "#25273a", display: "block", marginTop: "2px" }}>
                         {new Date(cert.issueDate).toLocaleDateString("en-US", {
                           year: "numeric",
                           month: "long",
                           day: "numeric",
                         })}
-                      </span>
+                      </strong>
                     </div>
                   </div>
                 </div>
 
-                {/* Download Button */}
-                <div className="pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
-                  <div className="text-[10px] text-gray-400 truncate">
+                {/* Download Footer */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginTop: "18px",
+                    paddingTop: "14px",
+                    borderTop: "1px solid #f0f1f5",
+                  }}
+                >
+                  <span style={{ fontSize: "9.5px", color: "#9da0b1", maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {cert.fileName} ({(cert.fileSize / 1024 / 1024).toFixed(2)} MB)
-                  </div>
+                  </span>
+
                   <a
                     href={cert.fileUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     download={cert.fileName}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#7459d2] hover:bg-[#6247bf] rounded-lg transition-colors shadow-xs shrink-0"
+                    className="admin-button"
                   >
                     <Download size={13} />
                     <span>Download Certificate</span>

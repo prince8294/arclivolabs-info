@@ -19,7 +19,16 @@ function AdminModalPortal({ children }: { children: ReactNode }) {
 
 type AdminRecord = Record<string, unknown> & { _id?: string; id?: string };
 type Envelope<T> = { success: boolean; message: string; data?: T; errors?: Array<{ field?: string; message: string }> };
-type Field = { key: string; label: string; type?: "text" | "email" | "url" | "number" | "textarea" | "date" | "select" | "csv" | "boolean" | "image"; options?: string[]; required?: boolean; hint?: string };
+type Field = {
+  key: string;
+  label: string;
+  type?: "text" | "email" | "url" | "number" | "textarea" | "date" | "select" | "csv" | "boolean" | "image" | "profile-picture" | "media-list" | "sync-date";
+  options?: string[];
+  required?: boolean;
+  hint?: string;
+  section?: "synced" | "manual";
+  syncOnly?: boolean;
+};
 
 const resourceForSection: Record<string, string> = {
   creators: "creators", brands: "brands", campaigns: "campaigns", enquiries: "enquiries",
@@ -37,9 +46,20 @@ const config: Record<string, { title: string; singular: string; description: str
       { key: "profileImage", label: "Profile photo (Upload File)", type: "image", hint: "Choose an image file (JPG, PNG, WEBP, AVIF) from your device to upload directly to Cloudinary." },
       { key: "contentCategories", label: "Categories (comma separated)", type: "csv", required: true },
       { key: "followers", label: "Followers", type: "number", required: true }, { key: "location", label: "Location", required: true },
-      { key: "instagramUsername", label: "Instagram username" }, { key: "youtubeChannel", label: "YouTube channel" },
+      { key: "followingCount", label: "Following", type: "number" }, { key: "postsCount", label: "Total Instagram posts", type: "number" },
+      { key: "instagramUsername", label: "Instagram username" }, { key: "instagramUrl", label: "Instagram profile URL", type: "url" },
+      { key: "youtubeChannel", label: "YouTube channel" },
       { key: "bio", label: "About creator", type: "textarea" },
+      { key: "averageViews", label: "Average views", type: "number" }, { key: "averageReelViews", label: "Average reel views", type: "number" },
+      { key: "averageLikes", label: "Average likes", type: "number" }, { key: "averageComments", label: "Average comments", type: "number" },
+      { key: "engagementRate", label: "Reel engagement rate (%)", type: "number" },
+      { key: "country", label: "Country" },
       { key: "languages", label: "Languages (comma separated)", type: "csv", hint: "e.g. English, Hindi, Tamil" },
+      { key: "availability", label: "Availability", type: "select", options: ["available", "unavailable"] },
+      { key: "approvalStatus", label: "Public approval", type: "select", options: ["pending", "approved", "rejected"] },
+      { key: "verificationStatus", label: "Creator verification", type: "select", options: ["unverified", "verified"] },
+      { key: "metricsVerificationStatus", label: "Analytics verification", type: "select", options: ["unverified", "pending", "verified"] },
+      { key: "featured", label: "Featured creator", type: "boolean" },
 
     ], statuses: ["pending", "approved", "rejected"], create: true,
   },
@@ -47,12 +67,29 @@ const config: Record<string, { title: string; singular: string; description: str
     title: "Creator applications", singular: "application", description: "Review applicants, record follow-ups, complete missing profile details, and approve creators into the network.",
     columns: [["referenceId", "Reference"], ["name", "Applicant"], ["email", "Email"], ["phone", "Phone"], ["primaryPlatform", "Platform"], ["socialProfile", "Social profile"], ["approvalStatus", "Status"]],
     fields: [
-      { key: "name", label: "Full name" }, { key: "email", label: "Email", type: "email" },
-      { key: "phone", label: "Phone / WhatsApp" }, { key: "primaryPlatform", label: "Primary platform" },
-      { key: "socialProfile", label: "Social profile link or username" },
-      { key: "contentCategory", label: "Content category" }, { key: "followers", label: "Followers / subscribers", type: "number" },
-      { key: "location", label: "Location" }, { key: "portfolioUrl", label: "Portfolio URL", type: "url" },
-      { key: "introduction", label: "Introduction", type: "textarea" },
+      { key: "name", label: "Full name", section: "synced" },
+      { key: "socialProfile", label: "Instagram profile URL", section: "synced", hint: "Sync is limited to public Instagram profiles accessible to the authorized Meta account." },
+      { key: "instagramUsername", label: "Username", section: "synced", syncOnly: true },
+      { key: "instagramBio", label: "Bio", type: "textarea", section: "synced", syncOnly: true },
+      { key: "profileImage", label: "Profile picture", type: "profile-picture", section: "synced", syncOnly: true },
+      { key: "followers", label: "Followers", type: "number", section: "synced", syncOnly: true },
+      { key: "followingCount", label: "Following", type: "number", section: "synced", syncOnly: true },
+      { key: "postsCount", label: "Total posts", type: "number", section: "synced", syncOnly: true },
+      { key: "averageLikes", label: "Average likes (recent media)", type: "number", section: "synced", syncOnly: true },
+      { key: "averageComments", label: "Average comments (recent media)", type: "number", section: "synced", syncOnly: true },
+      { key: "averageViews", label: "Average views (recent media)", type: "number", section: "synced", syncOnly: true },
+      { key: "engagementRate", label: "Engagement rate (%)", type: "number", section: "synced", syncOnly: true },
+      { key: "recentInstagramMedia", label: "Recent Reels / Posts", type: "media-list", section: "synced", syncOnly: true },
+      { key: "instagramLastSyncedAt", label: "Last synced", type: "sync-date", section: "synced", syncOnly: true },
+      { key: "email", label: "Email", type: "email", section: "manual" },
+      { key: "phone", label: "Phone / WhatsApp", section: "manual" },
+      { key: "location", label: "Location", section: "manual" },
+      { key: "primaryPlatform", label: "Primary platform", section: "manual" },
+      { key: "contentCategory", label: "Content category", section: "manual" },
+      { key: "languages", label: "Languages (comma separated)", type: "csv", section: "manual", hint: "e.g. English, Hindi, Tamil" },
+      { key: "portfolioUrl", label: "Portfolio URL", type: "url", section: "manual" },
+      { key: "collaborationCharges", label: "Collaboration charges", section: "manual" },
+      { key: "introduction", label: "Introduction", type: "textarea", section: "manual" },
     ], statuses: ["pending", "contacted", "qualified", "approved", "rejected"], create: false,
   },
   brands: {
@@ -458,6 +495,7 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
     const formData = new FormData(event.currentTarget);
     const values: Record<string, unknown> = {};
     for (const field of definition.fields) {
+      if (field.syncOnly) continue;
       const raw = formData.get(field.key);
       if (field.type === "boolean") {
         values[field.key] = raw === "on";
@@ -467,7 +505,7 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
         else values[field.key] = raw;
       } else if (field.key === "profileImage") {
         values[field.key] = "";
-      } else if (resource === "creator-applications" && ["email", "phone", "contentCategory", "followers", "location", "portfolioUrl", "introduction"].includes(field.key)) {
+      } else if (resource === "creator-applications" && ["email", "phone", "contentCategory", "followers", "location", "languages", "portfolioUrl", "collaborationCharges", "introduction"].includes(field.key)) {
         values[field.key] = null;
       }
     }
@@ -634,26 +672,7 @@ export function AdminWorkspace({ section, role, recordId }: { section: string; r
     {modal && <AdminModalPortal><div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setModal(false); }}>
       <form className="admin-modal" onSubmit={(event) => void submitForm(event)}>
         <div className="admin-modal-heading"><div><span className="admin-eyebrow">{formRecord ? "UPDATE RECORD" : "NEW RECORD"}</span><h2>{formRecord ? `Edit ${definition.singular}` : `Add ${definition.singular}`}</h2></div><button type="button" className="admin-icon-button" onClick={() => setModal(false)} aria-label="Close dialog"><X size={18} /></button></div>
-        <div className="admin-form-grid">{visibleFields.map((field) => (
-          field.type === "image" ? (
-            <AdminImageUploadField
-              key={field.key}
-              name={field.key}
-              label={field.label}
-              defaultValue={String(formRecord?.[field.key] ?? "")}
-              hint={field.hint}
-            />
-          ) : (
-            <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}>
-              <span>{field.label}{field.required && !formRecord && <i> *</i>}</span>
-              {field.type === "textarea" ? <textarea name={field.key} defaultValue={String(formRecord?.[field.key] ?? "")} required={field.required && !formRecord} rows={4} />
-                : field.type === "select" ? <select name={field.key} defaultValue={String(formRecord?.[field.key] ?? field.options?.[0] ?? "")}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
-                  : field.type === "boolean" ? <span className="admin-checkbox-row"><input type="checkbox" name={field.key} defaultChecked={Boolean(formRecord?.[field.key])} />Enabled</span>
-                    : <input name={field.key} type={field.type === "csv" ? "text" : field.type ?? "text"} defaultValue={field.type === "csv" ? toCsv(formRecord?.[field.key]) : formatInputValue(field, formRecord?.[field.key])} required={field.required && !formRecord} min={field.type === "number" ? 0 : undefined} />}
-              {field.hint && <small>{field.hint}</small>}
-            </label>
-          )
-        ))}</div>
+        <AdminFormFields key={`${resource}-${formRecord?._id ?? "new"}`} resource={resource} fields={visibleFields} formRecord={formRecord} />
         {error && <p className="admin-form-error" role="alert">{error}</p>}
         <div className="admin-modal-actions"><button type="button" className="admin-button admin-button-secondary" onClick={() => setModal(false)}>Cancel</button><button type="submit" className="admin-button" disabled={saving}>{saving ? <><LoaderCircle size={15} className="admin-spin" />Saving…</> : formRecord ? "Save changes" : "Create record"}</button></div>
       </form>
@@ -669,6 +688,139 @@ function formatInputValue(field: Field, value: unknown) {
 
 function toCsv(value: unknown): string {
   return Array.isArray(value) ? value.map((item) => String(item)).join(", ") : "";
+}
+
+function AdminFormFields({ resource, fields, formRecord }: { resource: string; fields: Field[]; formRecord: AdminRecord | null }) {
+  const [syncedRecord, setSyncedRecord] = useState<AdminRecord | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const displayedRecord = syncedRecord ?? formRecord;
+
+  async function syncInstagram(button: HTMLButtonElement) {
+    if (!formRecord?._id || !button.form) return;
+    const form = button.form;
+    const profileField = form.elements.namedItem("socialProfile");
+    const socialProfile = profileField instanceof HTMLInputElement ? profileField.value : "";
+    setSyncing(true);
+    setSyncFeedback(null);
+    try {
+      const response = await requestJson<{ application: AdminRecord; warning?: string }>(
+        `/api/admin/creator-applications/${formRecord._id}/sync-instagram`,
+        { method: "POST", body: JSON.stringify({ socialProfile }) },
+      );
+      if (!response.data?.application) throw new Error("Meta sync returned no application data.");
+      const updated = response.data.application;
+      setSyncedRecord({ ...formRecord, ...updated });
+      for (const key of ["name", "socialProfile", "instagramUsername", "instagramBio", "followers", "followingCount", "postsCount", "averageLikes", "averageComments", "averageViews", "engagementRate"]) {
+        const value = updated[key];
+        if (value === undefined || value === null) continue;
+        const control = form.elements.namedItem(key);
+        if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement) {
+          control.value = key === "engagementRate" ? `${String(value)}%` : String(value);
+        }
+      }
+      setSyncFeedback({
+        kind: response.data.warning ? "error" : "success",
+        message: response.message,
+      });
+    } catch (reason) {
+      setSyncFeedback({ kind: "error", message: reason instanceof Error ? reason.message : "Instagram sync failed." });
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  function renderField(field: Field) {
+    const value = displayedRecord?.[field.key];
+    if (field.type === "profile-picture") {
+      return <div className="admin-application-picture admin-field-wide" key={field.key}>
+        <span>{field.label}</span>
+        {typeof value === "string" && value
+          ? <img src={value} alt="Synced Instagram profile" />
+          : <div className="admin-application-picture-empty">No profile picture synced</div>}
+      </div>;
+    }
+    if (field.type === "media-list") {
+      const media = Array.isArray(value) ? value as AdminRecord[] : [];
+      return <div className="admin-application-media-field admin-field-wide" key={field.key}>
+        <span>{field.label}</span>
+        {media.length ? <div className="admin-application-media-grid">{media.map((item) => {
+          const mediaId = String(item.mediaId ?? item.id ?? "");
+          const permalink = typeof item.permalink === "string" ? item.permalink : "";
+          const title = String(item.mediaProductType ?? item.mediaType ?? "Instagram media").replace(/_/g, " ");
+          return <article className="admin-application-media-card" key={mediaId || permalink}>
+            {typeof item.thumbnailUrl === "string" && item.thumbnailUrl && <img src={item.thumbnailUrl} alt="" loading="lazy" />}
+            <div><b>{label(title)}</b>{(typeof item.publishedAt === "string" || item.publishedAt instanceof Date) && <small>{new Date(String(item.publishedAt)).toLocaleDateString()}</small>}</div>
+            <p>Likes {text(item.likesCount)} · Comments {text(item.commentsCount)} · Views {text(item.viewsCount)}</p>
+            {permalink && <a href={permalink} target="_blank" rel="noreferrer">Open post</a>}
+          </article>;
+        })}</div> : <p className="admin-application-empty">No recent media was returned by Meta.</p>}
+      </div>;
+    }
+    if (field.type === "sync-date") {
+      const date = value ? new Date(String(value)) : null;
+      return <div className="admin-form-field" key={field.key}>
+        <span>{field.label}</span>
+        <output>{date && !Number.isNaN(date.getTime()) ? date.toLocaleString() : "Never synced"}</output>
+      </div>;
+    }
+    if (field.type === "image") {
+      return <AdminImageUploadField
+        key={field.key}
+        name={field.key}
+        label={field.label}
+        defaultValue={String(value ?? "")}
+        hint={field.hint}
+      />;
+    }
+
+    const input = field.type === "textarea"
+      ? <textarea name={field.key} defaultValue={String(value ?? "")} required={field.required && !formRecord} rows={4} readOnly={field.syncOnly} />
+      : field.type === "select"
+        ? <select name={field.key} defaultValue={String(value ?? field.options?.[0] ?? "")} disabled={field.syncOnly}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
+        : field.type === "boolean"
+          ? <span className="admin-checkbox-row"><input type="checkbox" name={field.key} defaultChecked={Boolean(value)} disabled={field.syncOnly} />Enabled</span>
+          : <input
+            name={field.key}
+            type={field.type === "csv" ? "text" : field.type ?? "text"}
+            defaultValue={field.type === "csv" ? toCsv(value) : formatInputValue(field, value)}
+            required={field.required && !formRecord}
+            min={field.type === "number" ? 0 : undefined}
+            readOnly={field.syncOnly}
+            placeholder={field.syncOnly ? "Not available from Meta" : undefined}
+          />;
+
+    return <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}>
+      <span>{field.label}{field.required && !formRecord && <i> *</i>}</span>
+      {field.key === "socialProfile" && resource === "creator-applications"
+        ? <>
+          <div className="admin-instagram-url-row">
+            {input}
+            <button type="button" className="admin-button admin-button-secondary" onClick={(event) => void syncInstagram(event.currentTarget)} disabled={syncing || !formRecord?._id}>
+              {syncing ? <><LoaderCircle size={14} className="admin-spin" />Syncing…</> : <><RotateCw size={14} />Auto Sync Instagram</>}
+            </button>
+          </div>
+          {syncFeedback && <p className={`admin-instagram-sync-feedback ${syncFeedback.kind}`} role={syncFeedback.kind === "error" ? "alert" : "status"} aria-live="polite">{syncFeedback.message}</p>}
+        </>
+        : input}
+      {field.hint && <small>{field.hint}</small>}
+    </label>;
+  }
+
+  if (resource !== "creator-applications") {
+    return <div className="admin-form-grid">{fields.map(renderField)}</div>;
+  }
+
+  const sections = [
+    { key: "synced", title: "Auto-Synced Data", description: "Profile details and metrics returned by the authorized Meta Instagram API." },
+    { key: "manual", title: "Manual Details", description: "Contact, location and creator information maintained by your team." },
+  ] as const;
+  return <div className="admin-application-form-sections">
+    {sections.map((section) => <section className="admin-application-section" key={section.key}>
+      <div className="admin-application-section-heading"><div><h3>{section.title}</h3><p>{section.description}</p></div></div>
+      <div className="admin-form-grid">{fields.filter((field) => field.section === section.key).map(renderField)}</div>
+    </section>)}
+  </div>;
 }
 
 function AdminRecordDetail({ section, resource, item, onEdit, definition, visibleFields, saving, error, notice, onDelete, canManage, modal, closeModal, submitForm, formRecord }: {
@@ -720,25 +872,7 @@ function AdminRecordDetail({ section, resource, item, onEdit, definition, visibl
     </div>
     {resource === "creators" && <article className="admin-panel admin-panel-padding"><div className="admin-panel-heading"><div><h2>Campaign history</h2><p>Current and past campaigns featuring this creator</p></div></div><p className="admin-muted">Campaign assignments are available on campaign detail records.</p></article>}
     {modal && <AdminModalPortal><div className="admin-modal-backdrop"><form className="admin-modal" onSubmit={(event) => submitForm(event)}><div className="admin-modal-heading"><div><span className="admin-eyebrow">UPDATE RECORD</span><h2>Edit {definition.singular}</h2></div><button className="admin-icon-button" type="button" onClick={() => closeModal()} aria-label="Close dialog"><X size={18} /></button></div>
-      <div className="admin-form-grid">{visibleFields.map((field) => (
-        field.type === "image" ? (
-          <AdminImageUploadField
-            key={field.key}
-            name={field.key}
-            label={field.label}
-            defaultValue={String(formRecord?.[field.key] ?? "")}
-            hint={field.hint}
-          />
-        ) : (
-          <label className={`admin-form-field ${field.type === "textarea" ? "admin-field-wide" : ""}`} key={field.key}><span>{field.label}</span>
-            {field.type === "textarea" ? <textarea name={field.key} defaultValue={String(formRecord?.[field.key] ?? "")} rows={4} />
-              : field.type === "select" ? <select name={field.key} defaultValue={String(formRecord?.[field.key] ?? field.options?.[0] ?? "")}>{field.options?.map((option) => <option value={option} key={option}>{label(option)}</option>)}</select>
-                : field.type === "boolean" ? <span className="admin-checkbox-row"><input type="checkbox" name={field.key} defaultChecked={Boolean(formRecord?.[field.key])} />Enabled</span>
-                  : <input name={field.key} type={field.type === "csv" ? "text" : field.type ?? "text"} defaultValue={field.type === "csv" ? toCsv(formRecord?.[field.key]) : formatInputValue(field, formRecord?.[field.key])} min={field.type === "number" ? 0 : undefined} />}
-            {field.hint && <small>{field.hint}</small>}
-          </label>
-        )
-      ))}</div>{error && <p className="admin-form-error" role="alert">{error}</p>}
+      <AdminFormFields key={`${resource}-${formRecord?._id ?? "new"}`} resource={resource} fields={visibleFields} formRecord={formRecord} />{error && <p className="admin-form-error" role="alert">{error}</p>}
       <div className="admin-modal-actions"><button type="button" className="admin-button admin-button-secondary" onClick={() => closeModal()}>Cancel</button><button type="submit" className="admin-button" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div></form></div></AdminModalPortal>}
   </section>;
 }

@@ -42,6 +42,28 @@ import {
 } from "lucide-react";
 import { generateReferralCode, generateStudentId } from "@/lib/student-utils";
 
+function generateStrongPassword(): string {
+  const lower = "abcdefghijkmnopqrstuvwxyz";
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const digits = "23456789";
+  const symbols = "!@#$%^&*_-+=";
+  const all = lower + upper + digits + symbols;
+  const random = new Uint32Array(40);
+  crypto.getRandomValues(random);
+  const characters = [
+    lower[random[0] % lower.length],
+    upper[random[1] % upper.length],
+    digits[random[2] % digits.length],
+    symbols[random[3] % symbols.length],
+    ...Array.from({ length: 16 }, (_, index) => all[random[index + 4] % all.length]),
+  ];
+  for (let index = characters.length - 1; index > 0; index -= 1) {
+    const swapIndex = random[characters.length + index] % (index + 1);
+    [characters[index], characters[swapIndex]] = [characters[swapIndex], characters[index]];
+  }
+  return characters.join("");
+}
+
 function AdminModalPortal({ children }: { children: React.ReactNode }) {
   if (typeof document === "undefined") return null;
   return createPortal(children, document.querySelector(".admin-frame") ?? document.body);
@@ -660,7 +682,7 @@ export function StudentManagement() {
   function handleOpenCreateModal() {
     setCreateName("");
     setCreateEmail("");
-    setCreatePassword("Student@" + Math.floor(1000 + Math.random() * 9000));
+    setCreatePassword(generateStrongPassword());
     setCreateStudentId(generateStudentId());
     setCreateReferralCode(generateReferralCode());
     setCreatePhone("");
@@ -2455,6 +2477,8 @@ export function StudentManagement() {
                     <input
                       type="text"
                       required
+                      minLength={12}
+                      autoComplete="new-password"
                       value={createStudentId}
                       onChange={(e) => setCreateStudentId(e.target.value.toUpperCase())}
                       style={{ fontFamily: "monospace", textTransform: "uppercase" }}
@@ -2509,15 +2533,13 @@ export function StudentManagement() {
                       type="button"
                       className="admin-button admin-button-secondary"
                       style={{ flexShrink: 0, padding: "0 10px" }}
-                      onClick={() =>
-                        setCreatePassword("Student@" + Math.floor(1000 + Math.random() * 9000))
-                      }
+                      onClick={() => setCreatePassword(generateStrongPassword())}
                       title="Generate new password"
                     >
                       <Key size={13} />
                     </button>
                   </div>
-                  <small>Initial login credentials for the student portal</small>
+                  <small>20-character cryptographically generated initial password</small>
                 </label>
 
                 <label className="admin-form-field">
@@ -2687,8 +2709,10 @@ export function StudentManagement() {
                 <label className="admin-form-field">
                   <span>Reset password (leave blank to keep current)</span>
                   <input
-                    type="text"
-                    placeholder="New password…"
+                    type="password"
+                    minLength={12}
+                    autoComplete="new-password"
+                    placeholder="12+ characters, number & symbol"
                     value={editNewPassword}
                     onChange={(e) => setEditNewPassword(e.target.value)}
                     style={{ fontFamily: "monospace" }}

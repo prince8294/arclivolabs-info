@@ -15,7 +15,7 @@ export class ApiError extends Error {
 }
 
 export function apiSuccess<T>(data: T, message = "Request completed successfully", status = 200) {
-  return NextResponse.json({ success: true, message, data }, { status });
+  return noStore(NextResponse.json({ success: true, message, data }, { status }));
 }
 
 export function apiFailure(
@@ -24,7 +24,7 @@ export function apiFailure(
   errors: Array<{ field?: string; message: string }> = [],
   headers?: HeadersInit,
 ) {
-  return NextResponse.json({ success: false, message, errors }, { status, headers });
+  return noStore(NextResponse.json({ success: false, message, errors }, { status, headers }));
 }
 
 export async function handleApiError(error: unknown): Promise<NextResponse> {
@@ -76,4 +76,10 @@ export function withApiErrors<Args extends unknown[]>(
 
 function isDuplicateKeyError(error: unknown): error is { code: number } {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11000;
+}
+
+function noStore(response: NextResponse): NextResponse {
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
+  return response;
 }

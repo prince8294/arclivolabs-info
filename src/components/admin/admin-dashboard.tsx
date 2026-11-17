@@ -63,9 +63,10 @@ function comparisonLabel(change: number | null) {
 
 type SyncInfo = {
   lastSyncAt: string | null;
-  lastSyncStatus: "succeeded" | "failed" | "processing" | "never" | "no_provider";
+  lastSyncStatus: "succeeded" | "failed" | "processing" | "never" | "not_configured";
   processedCount: number;
   totalWithInstagram: number;
+  dueCount: number;
   providerConfigured: boolean;
   providerName: string;
   providerType: string;
@@ -126,9 +127,9 @@ export function AdminDashboard() {
       const response = await fetch("/api/admin/creators/sync-instagram", { method: "POST" });
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to sync creator followers.");
+        throw new Error(result.message || "Failed to sync creator data with Meta.");
       }
-      setSyncNotice(result.message || "Creator followers synced successfully.");
+      setSyncNotice(result.message || "Creator data synced with Meta successfully.");
       await load();
     } catch (err) {
       setSyncError(err instanceof Error ? err.message : "Sync failed.");
@@ -191,13 +192,13 @@ export function AdminDashboard() {
             </span>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
-                <h2 style={{ fontSize: "15px", fontWeight: "650", margin: 0, color: "#111" }}>Instagram Follower Sync</h2>
+                <h2 style={{ fontSize: "15px", fontWeight: "650", margin: 0, color: "#111" }}>Meta Instagram Sync</h2>
                 <span className={`admin-status-pill admin-status-${syncInfo?.lastSyncStatus === "succeeded" ? "approved" : syncInfo?.lastSyncStatus === "processing" ? "pending" : syncInfo?.lastSyncStatus === "failed" ? "rejected" : "draft"}`}>
                   {syncInfo?.lastSyncStatus === "succeeded" ? "Synced" : syncInfo?.lastSyncStatus === "processing" ? "Syncing…" : syncInfo?.lastSyncStatus === "failed" ? "Failed" : syncInfo?.providerConfigured ? "Ready" : "API Key Required"}
                 </span>
               </div>
               <p style={{ fontSize: "12px", color: "#6c6e79", margin: 0 }}>
-                Automatically updates all creator follower counts in MongoDB every 24 hours.
+                Profiles, metrics, recent posts/reels and Cloudinary images update every 7 days.
               </p>
             </div>
           </div>
@@ -215,6 +216,12 @@ export function AdminDashboard() {
               <span style={{ display: "block", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a8c99", fontWeight: "600" }}>Data Provider</span>
               <b style={{ fontSize: "12px", color: "#222", fontWeight: "600" }}>{syncInfo?.providerName ?? "Checking…"}</b>
             </div>
+            <div>
+              <span style={{ display: "block", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a8c99", fontWeight: "600" }}>Next Batch</span>
+              <b style={{ fontSize: "12px", color: "#222", fontWeight: "600" }}>
+                {syncInfo ? `${syncInfo.dueCount} creators due` : "Checking…"}
+              </b>
+            </div>
 
             <button
               type="button"
@@ -224,7 +231,7 @@ export function AdminDashboard() {
               style={{ minHeight: "36px", padding: "0 16px" }}
             >
               <RotateCw size={14} className={syncing ? "admin-spin" : ""} />
-              {syncing ? "Syncing All…" : "Sync All"}
+              {syncing ? "Syncing with Meta…" : "Sync with Meta"}
             </button>
           </div>
         </div>

@@ -7,7 +7,13 @@ export const cleanText = (max: number, min = 1) =>
 
 export const emailAddress = z.string().trim().toLowerCase().email().max(254);
 export const phoneNumber = z.string().trim().min(7).max(32);
-export const safeUrl = z.string().trim().url().max(2048);
+export const safeUrl = z.string().trim().url().max(2048).refine(
+  (value) => {
+    const protocol = new URL(value).protocol;
+    return protocol === "https:" || protocol === "http:";
+  },
+  "URL must use HTTP or HTTPS.",
+);
 export const objectId = z.string().regex(/^[a-f\d]{24}$/i, "A valid record ID is required.");
 
 export function normalizeSocialUsername(value: string | undefined): string | undefined {

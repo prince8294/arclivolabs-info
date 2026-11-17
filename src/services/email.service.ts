@@ -1,10 +1,11 @@
 import EmailOutbox from "@/models/EmailOutbox";
 import { z } from "zod";
+import { safeUrl } from "@/lib/validations/common";
 
 const emailTemplateSchema = z.discriminatedUnion("template", [
-  z.object({ template: z.literal("email_verification"), data: z.object({ name: z.string(), verificationUrl: z.string().url() }) }),
-  z.object({ template: z.literal("campaign_invitation"), data: z.object({ name: z.string(), campaignTitle: z.string(), invitationUrl: z.string().url() }) }),
-  z.object({ template: z.literal("password_reset"), data: z.object({ name: z.string(), resetUrl: z.string().url() }) }),
+  z.object({ template: z.literal("email_verification"), data: z.object({ name: z.string(), verificationUrl: safeUrl }) }),
+  z.object({ template: z.literal("campaign_invitation"), data: z.object({ name: z.string(), campaignTitle: z.string(), invitationUrl: safeUrl }) }),
+  z.object({ template: z.literal("password_reset"), data: z.object({ name: z.string(), resetUrl: safeUrl }) }),
 ]);
 type EmailTemplate = z.infer<typeof emailTemplateSchema>;
 

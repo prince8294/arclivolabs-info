@@ -1,4 +1,7 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { BrandLoader } from "@/components/brand-loader";
 import { AdminWorkspace } from "@/components/admin/admin-workspace";
 import { getCurrentUser } from "@/lib/permissions";
 
@@ -7,13 +10,26 @@ const detailSections = new Set([
   "team", "services", "blogs", "notifications", "activity-logs",
 ]);
 
-export default async function AdminRecordPage({
+export default function AdminRecordPage({
   params,
   searchParams,
 }: {
   params: Promise<{ section: string; id: string }>;
   searchParams: Promise<{ type?: string }>;
 }) {
+  return <Suspense fallback={<BrandLoader label="Loading admin record" variant="section" className="admin-brand-loader" />}>
+    <AdminRecordContent params={params} searchParams={searchParams} />
+  </Suspense>;
+}
+
+async function AdminRecordContent({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ section: string; id: string }>;
+  searchParams: Promise<{ type?: string }>;
+}) {
+  await connection();
   const [{ section, id }, query, user] = await Promise.all([params, searchParams, getCurrentUser()]);
   if (!detailSections.has(section)) notFound();
   const resource = query.type ?? section;

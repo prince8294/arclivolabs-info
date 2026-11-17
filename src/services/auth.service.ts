@@ -29,7 +29,8 @@ export async function verifyCredentials(input: LoginInput) {
   const user = await User.findOne({ email: input.email }).select("+passwordHash");
   const passwordHash = user?.passwordHash ?? await getDummyPasswordHash();
   const passwordMatches = await bcrypt.compare(input.password, passwordHash);
-  if (!user || !passwordMatches || user.status !== "active") return null;
+  const emailVerificationRequired = user?.role === "brand" || user?.role === "creator";
+  if (!user || !passwordMatches || user.status !== "active" || (emailVerificationRequired && !user.isEmailVerified)) return null;
 
   user.lastLoginAt = new Date();
   await user.save();

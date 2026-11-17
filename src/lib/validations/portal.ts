@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { cleanText, objectId } from "@/lib/validations/common";
+import { cleanText, objectId, safeUrl } from "@/lib/validations/common";
 
-const httpUrl = z.string().trim().url().max(2048).refine((value) => ["http:", "https:"].includes(new URL(value).protocol), "URL must use HTTP or HTTPS.");
+const httpUrl = safeUrl;
 
 export const brandProfileSchema = z.object({
   companyName: cleanText(180, 2),

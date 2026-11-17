@@ -43,11 +43,23 @@ export async function enforceRateLimit({ scope, identity, limit, windowMs }: Rat
 
 export function getClientAddress(request: Request): string {
   const headers = request.headers;
-  return headers.get("x-vercel-forwarded-for")
-    ?? headers.get("cf-connecting-ip")
-    ?? headers.get("x-real-ip")
-    ?? headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    ?? "unknown";
+  if (process.env.VERCEL) {
+    return firstForwardedAddress(headers.get("x-vercel-forwarded-for")) ?? "unknown";
+  }
+  if (process.env.CF_PAGES) {
+    return headers.get("cf-connecting-ip")?.trim() || "unknown";
+  }
+  if (process.env.TRUST_PROXY_HEADERS === "true") {
+    return headers.get("cf-connecting-ip")?.trim()
+      || headers.get("x-real-ip")?.trim()
+      || firstForwardedAddress(headers.get("x-forwarded-for"))
+      || "unknown";
+  }
+  return "unknown";
+}
+
+function firstForwardedAddress(value: string | null): string | undefined {
+  return value?.split(",")[0]?.trim() || undefined;
 }
 
 function isDuplicateKeyError(error: unknown): error is { code: number } {

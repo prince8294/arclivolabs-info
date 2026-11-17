@@ -8,7 +8,7 @@ import { userRoles, type UserRole } from "@/models/User";
 const secureCookies = process.env.NODE_ENV === "production";
 
 export const sessionCookieName = secureCookies
-  ? "__Secure-next-auth.session-token"
+  ? "__Host-next-auth.session-token"
   : "next-auth.session-token";
 
 export const sessionMaxAge = 60 * 60 * 8;

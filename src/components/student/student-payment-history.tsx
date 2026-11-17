@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  AlertCircle,
   ArrowRight,
   CheckCircle2,
   Clock,
@@ -11,6 +10,7 @@ import {
   Info,
   Receipt,
   Wallet,
+  X,
   XCircle,
 } from "lucide-react";
 import { formatINR } from "@/lib/student-utils";
@@ -68,196 +68,266 @@ export function StudentPaymentHistory() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-page-heading">
         <div>
-          <span className="text-xs font-bold tracking-widest text-[#7459d2] uppercase block mb-1">
-            Financial Ledger
-          </span>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Payment History</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Track processed disbursements, transaction references (UTR), and pending balances.
+          <span className="admin-eyebrow">FINANCIAL DISBURSEMENTS & LEDGER</span>
+          <h1>Payment History</h1>
+          <p>
+            Track processed disbursements, transaction reference numbers (UTR), payment modes, and itemized payout records.
           </p>
         </div>
 
-        <Link
-          href="/student/support"
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors shadow-xs shrink-0"
-        >
-          <HelpCircle size={14} />
-          <span>Payment Support</span>
-        </Link>
+        <div className="admin-heading-actions">
+          <Link
+            href="/student/earnings"
+            className="admin-button"
+          >
+            <Wallet size={14} />
+            <span>Earnings Breakdown</span>
+          </Link>
+
+          <Link
+            href="/student/support"
+            className="admin-button admin-button-secondary"
+          >
+            <HelpCircle size={14} />
+            <span>Payment Inquiries</span>
+          </Link>
+        </div>
       </div>
 
+      {error && (
+        <div className="admin-inline-error" role="alert">
+          {error}
+          <button onClick={() => setError("")} aria-label="Dismiss error">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Financial Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Total Earnings */}
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Total Approved Commission</span>
-            <div className="w-9 h-9 rounded-lg bg-purple-50 text-[#7459d2] flex items-center justify-center">
-              <Wallet size={18} />
-            </div>
+      <div className="admin-kpi-grid">
+        {/* Total Approved Commission */}
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-violet">
+            <Wallet size={16} />
           </div>
-          <div className="text-2xl font-extrabold text-gray-900 mt-2">
+          <span className="admin-kpi-label">TOTAL APPROVED COMMISSION</span>
+          <div className="admin-kpi-value">
             {loading ? "…" : formatINR(summary.totalEarnings)}
           </div>
-          <p className="text-[11px] text-gray-400 mt-1">From verified creator referrals</p>
+          <span className="admin-kpi-sub">Total earned from verified creators</span>
         </div>
 
-        {/* Paid Amount */}
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Total Amount Paid</span>
-            <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 size={18} />
-            </div>
+        {/* Total Disbursed */}
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-green">
+            <CheckCircle2 size={16} />
           </div>
-          <div className="text-2xl font-extrabold text-emerald-600 mt-2">
+          <span className="admin-kpi-label">TOTAL AMOUNT PAID</span>
+          <div className="admin-kpi-value" style={{ color: "#15845f" }}>
             {loading ? "…" : formatINR(summary.paidAmount)}
           </div>
-          <p className="text-[11px] text-emerald-600 mt-1 font-medium">Successfully disbursed</p>
+          <span className="admin-kpi-sub">Successfully disbursed to your account</span>
         </div>
 
-        {/* Pending Balance */}
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Pending Payment Balance</span>
-            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock size={18} />
-            </div>
+        {/* Pending Payout */}
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-amber">
+            <Clock size={16} />
           </div>
-          <div className="text-2xl font-extrabold text-amber-600 mt-2">
+          <span className="admin-kpi-label">PENDING BALANCE</span>
+          <div className="admin-kpi-value" style={{ color: "#a2701f" }}>
             {loading ? "…" : formatINR(summary.pendingPayment)}
           </div>
-          <p className="text-[11px] text-gray-400 mt-1">Pending agency disbursement</p>
+          <span className="admin-kpi-sub">Awaiting next finance disbursement batch</span>
+        </div>
+
+        {/* Records Count */}
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-blue">
+            <Receipt size={16} />
+          </div>
+          <span className="admin-kpi-label">TOTAL TRANSACTIONS</span>
+          <div className="admin-kpi-value">
+            {loading ? "…" : payments.length}
+          </div>
+          <span className="admin-kpi-sub">Recorded by agency finance</span>
         </div>
       </div>
 
       {/* Info Notice */}
-      <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 flex items-start gap-3">
-        <Info size={16} className="text-[#7459d2] shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <p className="font-semibold text-gray-900">Official Ambassador Disbursements:</p>
-          <p className="text-[11px] text-gray-600 mt-0.5">
-            Disbursements are created manually by the agency finance team via UPI or direct bank transfer.
-            UTR and transaction reference numbers are updated upon successful settlement.
+      <div
+        className="admin-panel admin-panel-padding"
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: "12px",
+          background: "#fcfcff",
+          borderLeft: "3px solid #7257ce",
+        }}
+      >
+        <Info size={16} style={{ color: "#7257ce", flexShrink: 0, marginTop: "2px" }} />
+        <div>
+          <b style={{ fontSize: "11px", color: "#2d3045" }}>Official Ambassador Disbursements</b>
+          <p style={{ margin: "2px 0 0", fontSize: "10.5px", color: "#777a8e", lineHeight: "1.5" }}>
+            Payments are disbursed periodically by the agency finance team via direct bank transfer or UPI. Once settlement is completed, the respective UTR / Transaction Reference number is published here for your records.
           </p>
         </div>
       </div>
 
-      {/* Payment History List / Empty State */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+      {/* Payment History Table Panel */}
+      <div className="admin-panel admin-table-panel">
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #e8e9ef",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+          }}
+        >
           <div>
-            <h3 className="text-sm font-bold text-gray-900">Disbursement Records</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Itemized history of all payments recorded by administration ({payments.length} total).
+            <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#292b3e", margin: 0 }}>
+              Disbursement Records
+            </h2>
+            <p style={{ fontSize: "11px", color: "#85889d", margin: "4px 0 0" }}>
+              Ledger of all payment transactions created by administration ({payments.length} total records).
             </p>
           </div>
+
           <Link
             href="/student/earnings"
-            className="text-xs font-semibold text-[#7459d2] hover:underline inline-flex items-center gap-1"
+            className="admin-text-link"
           >
-            <span>Earnings Breakdown</span>
+            <span>Commission Earnings</span>
             <ArrowRight size={12} />
           </Link>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-gray-400">
-            <div className="w-7 h-7 border-2 border-[#7459d2] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            <p className="text-xs">Loading disbursement records…</p>
-          </div>
-        ) : error ? (
-          <div className="p-6 text-center text-rose-600 text-xs">
-            <p>{error}</p>
+          <div className="admin-empty-state" style={{ minHeight: "260px" }}>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                border: "2px solid #7359d2",
+                borderTopColor: "transparent",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+                marginBottom: "12px",
+              }}
+            />
+            <b>Loading disbursement history…</b>
           </div>
         ) : payments.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-purple-50 text-[#7459d2] flex items-center justify-center mx-auto mb-3">
-              <Receipt size={24} />
-            </div>
-            <h3 className="text-sm font-bold text-gray-900">No payout records yet</h3>
-            <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1 leading-relaxed">
-              Your payment history will appear here once referral earnings are disbursed by administration.
+          <div className="admin-empty-state" style={{ minHeight: "240px" }}>
+            <Receipt size={32} style={{ color: "#c4c7d6", marginBottom: "8px" }} />
+            <b>No disbursement records found</b>
+            <p style={{ margin: "5px 0 16px", fontSize: "11px", color: "#8b8fa2", maxWidth: "420px" }}>
+              Your payout history will appear here once agency administrators record a disbursement for your verified referral earnings.
             </p>
-            <div className="mt-5 flex items-center justify-center gap-3">
-              <Link
-                href="/student/earnings"
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-[#7459d2] bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors border border-purple-200"
-              >
-                <Wallet size={13} />
-                <span>Check Current Earnings</span>
-              </Link>
-            </div>
+            <Link href="/student/earnings" className="admin-button admin-button-secondary">
+              <Wallet size={13} />
+              <span>Check Current Earnings</span>
+            </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px] font-bold">
-                  <th className="py-3 px-4">Disbursement Date</th>
-                  <th className="py-3 px-4">Amount</th>
-                  <th className="py-3 px-4">Payment Method</th>
-                  <th className="py-3 px-4">Transaction Reference / UTR</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Payment Note</th>
+                <tr>
+                  <th>DATE</th>
+                  <th>AMOUNT</th>
+                  <th>METHOD</th>
+                  <th>TRANSACTION REFERENCE / UTR</th>
+                  <th>STATUS</th>
+                  <th>PAYMENT NOTE</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {payments.map((p) => (
-                  <tr key={p._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3.5 px-4 font-medium text-gray-900 whitespace-nowrap">
-                      {new Date(p.paymentDate).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                  <tr key={p._id}>
+                    <td>
+                      <span style={{ fontWeight: "600", color: "#2d3043" }}>
+                        {new Date(p.paymentDate).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
                     </td>
-                    <td className="py-3.5 px-4 font-bold text-gray-900 whitespace-nowrap">
-                      ₹{p.amount.toLocaleString()}
+                    <td>
+                      <span style={{ fontWeight: "700", color: "#15845f", fontSize: "11px" }}>
+                        ₹{p.amount.toLocaleString()}
+                      </span>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-700">
+                    <td>
+                      <span
+                        style={{
+                          fontSize: "9.5px",
+                          fontWeight: "600",
+                          color: "#5b5e70",
+                          background: "#f0f1f5",
+                          padding: "3px 7px",
+                          borderRadius: "4px",
+                        }}
+                      >
                         {p.paymentMethod}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-gray-700">
+                    <td>
                       {p.transactionReference ? (
-                        <span className="bg-purple-50/60 text-[#6247bf] px-2 py-0.5 rounded border border-purple-100">
+                        <span
+                          style={{
+                            fontFamily: "monospace",
+                            fontSize: "10px",
+                            fontWeight: "600",
+                            color: "#7257ce",
+                            background: "#f0edff",
+                            padding: "3px 7px",
+                            borderRadius: "4px",
+                          }}
+                        >
                           {p.transactionReference}
                         </span>
                       ) : (
-                        <span className="text-gray-400 italic">Pending UTR</span>
+                        <span style={{ color: "#a5a7b7", fontSize: "10px", fontStyle: "italic" }}>
+                          Pending UTR
+                        </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td>
                       {p.status === "paid" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                          <CheckCircle2 size={12} />
-                          <span>Paid</span>
+                        <span className="admin-status-pill admin-status-approved">
+                          <CheckCircle2 size={11} style={{ marginRight: "4px" }} />
+                          Paid
                         </span>
                       ) : p.status === "processing" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                          <Clock size={12} />
-                          <span>Processing</span>
+                        <span className="admin-status-pill admin-status-proposal_sent">
+                          <Clock size={11} style={{ marginRight: "4px" }} />
+                          Processing
                         </span>
                       ) : p.status === "rejected" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                          <XCircle size={12} />
-                          <span>Rejected</span>
+                        <span className="admin-status-pill admin-status-rejected">
+                          <XCircle size={11} style={{ marginRight: "4px" }} />
+                          Rejected
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                          <Clock size={12} />
-                          <span>Pending</span>
+                        <span className="admin-status-pill admin-status-pending">
+                          <Clock size={11} style={{ marginRight: "4px" }} />
+                          Pending
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4 text-gray-500 max-w-xs truncate text-[11px]">
-                      {p.internalNote || <span className="text-gray-300">—</span>}
+                    <td>
+                      <span style={{ color: "#74788c", fontSize: "10px" }}>
+                        {p.internalNote || "—"}
+                      </span>
                     </td>
                   </tr>
                 ))}

@@ -16,6 +16,10 @@ Set deployment values in the hosting provider's secret manager. Do not commit `.
 | `RESEND_API_KEY` | Email | Server-only Resend API key. |
 | `EMAIL_FROM` | Email | Verified sender identity, e.g. `Arclivo <notifications@example.com>`. |
 | `CRON_SECRET` | Scheduler | Random bearer token for `GET /api/cron`. |
+| `META_ACCESS_TOKEN` | Instagram sync | Server-only long-lived Meta access token with the permissions required for Instagram Business Discovery. |
+| `META_INSTAGRAM_ACCOUNT_ID` | Instagram sync | Instagram professional account ID owned by the agency and used as the Business Discovery caller. |
+| `META_GRAPH_API_VERSION` | Instagram sync | Optional pinned Graph API version. Defaults to `v27.0`. |
+| `TRUST_PROXY_HEADERS` | Self-hosted only | Set to `true` only when a trusted reverse proxy overwrites `X-Forwarded-For`/`X-Real-IP`; otherwise spoofable proxy headers are ignored. Vercel and Cloudflare Pages are detected automatically. |
 | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Development only | Explicit credentials for the guarded seed script. |
 
 `NEXT_PUBLIC_*` values are public. Keep database, authentication, email, Cloudinary, and cron secrets server-only.

@@ -8,9 +8,10 @@ import {
   Clock,
   HelpCircle,
   Receipt,
-  ShieldCheck,
   TrendingUp,
+  UserCheck,
   Wallet,
+  X,
 } from "lucide-react";
 import { formatINR } from "@/lib/student-utils";
 
@@ -65,6 +66,7 @@ export function StudentEarnings() {
   });
   const [verifiedList, setVerifiedList] = useState<VerifiedReferral[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function loadStats() {
@@ -83,8 +85,8 @@ export function StudentEarnings() {
         if (refRes.ok && refJson.success) {
           setVerifiedList(refJson.data.referrals || []);
         }
-      } catch {
-        // Fallback
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error loading earnings data.");
       } finally {
         setLoading(false);
       }
@@ -92,181 +94,221 @@ export function StudentEarnings() {
     loadStats();
   }, []);
 
+  const pendingBalance =
+    data.pendingPayment !== undefined
+      ? data.pendingPayment
+      : Math.max(0, data.totalEarnings - (data.paidAmount ?? 0));
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: "22px" }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="admin-page-heading">
         <div>
-          <span className="text-xs font-bold tracking-widest text-[#7459d2] uppercase block mb-1">
-            Financial Overview
-          </span>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Total Earnings</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Track approved referral rewards, verified creator commissions, and ambassador balances.
+          <span className="admin-eyebrow">FINANCIAL OVERVIEW & LEDGER</span>
+          <h1>Total Earnings</h1>
+          <p>
+            Track approved referral rewards, verified creator commissions, disbursed payments, and your pending balance.
           </p>
         </div>
 
-        <Link
-          href="/student/payment-history"
-          className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-white bg-[#7459d2] hover:bg-[#6247bf] rounded-lg transition-colors shadow-xs shrink-0"
-        >
-          <Receipt size={14} />
-          <span>View Payment History</span>
-        </Link>
+        <div className="admin-heading-actions">
+          <Link
+            href="/student/payment-history"
+            className="admin-button"
+          >
+            <Receipt size={14} />
+            <span>Disbursement History</span>
+          </Link>
+
+          <Link
+            href="/student/support"
+            className="admin-button admin-button-secondary"
+          >
+            <HelpCircle size={14} />
+            <span>Payout Support</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Main KPI Cards: Total Earnings, Paid Amount, Pending Payment */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {error && (
+        <div className="admin-inline-error" role="alert">
+          {error}
+          <button onClick={() => setError("")} aria-label="Dismiss error">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Primary Financial KPI Cards */}
+      <div className="admin-kpi-grid">
         {/* Total Earnings */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Total Approved Earnings</span>
-            <div className="w-10 h-10 rounded-lg bg-purple-50 text-[#7459d2] flex items-center justify-center">
-              <Wallet size={20} />
-            </div>
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-violet">
+            <Wallet size={16} />
           </div>
-          <div className="text-3xl font-extrabold text-gray-900 mt-3">
+          <span className="admin-kpi-label">TOTAL APPROVED COMMISSION</span>
+          <div className="admin-kpi-value">
             {loading ? "…" : formatINR(data.totalEarnings)}
           </div>
-          <p className="text-[11px] text-emerald-600 mt-1 font-medium flex items-center gap-1">
-            <CheckCircle2 size={12} />
-            <span>Approved by Agency</span>
-          </p>
+          <span className="admin-kpi-sub" style={{ color: "#168d65", display: "flex", alignItems: "center", gap: "4px" }}>
+            <CheckCircle2 size={10} />
+            Approved by agency administration
+          </span>
         </div>
 
         {/* Paid Amount */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Total Amount Paid</span>
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 size={20} />
-            </div>
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-green">
+            <CheckCircle2 size={16} />
           </div>
-          <div className="text-3xl font-extrabold text-emerald-600 mt-3">
+          <span className="admin-kpi-label">TOTAL AMOUNT PAID</span>
+          <div className="admin-kpi-value" style={{ color: "#15845f" }}>
             {loading ? "…" : formatINR(data.paidAmount ?? 0)}
           </div>
-          <p className="text-[11px] text-emerald-600 mt-1 font-medium">
-            Disbursed via UPI / Bank
-          </p>
+          <span className="admin-kpi-sub">Disbursed via direct transfer / UPI</span>
         </div>
 
-        {/* Pending Payment */}
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-gray-500">Pending Payment Balance</span>
-            <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock size={20} />
-            </div>
+        {/* Pending Payment Balance */}
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-amber">
+            <Clock size={16} />
           </div>
-          <div className="text-3xl font-extrabold text-amber-600 mt-3">
-            {loading ? "…" : formatINR(data.pendingPayment ?? Math.max(0, data.totalEarnings - (data.paidAmount ?? 0)))}
+          <span className="admin-kpi-label">PENDING PAYOUT BALANCE</span>
+          <div className="admin-kpi-value" style={{ color: "#a2701f" }}>
+            {loading ? "…" : formatINR(pendingBalance)}
           </div>
-          <p className="text-[11px] text-gray-400 mt-1">
-            Approved commissions awaiting payout
-          </p>
-        </div>
-      </div>
-
-      {/* Secondary Referral Status Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-gray-500">Verified Creators</span>
-            <div className="text-2xl font-bold text-gray-900 mt-1">
-              {loading ? "…" : data.verifiedCreators}
-            </div>
-            <p className="text-[11px] text-gray-400 mt-0.5">Creators confirmed with follower metrics</p>
-          </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-            <TrendingUp size={20} />
-          </div>
+          <span className="admin-kpi-sub">Approved commissions awaiting next payout</span>
         </div>
 
-        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
-          <div>
-            <span className="text-xs font-semibold text-gray-500">Pending Creator Verification</span>
-            <div className="text-2xl font-bold text-gray-900 mt-1">
-              {loading ? "…" : data.pendingVerification}
-            </div>
-            <p className="text-[11px] text-gray-400 mt-0.5">Undergoing quality and follower verification</p>
+        {/* Verified Creators count */}
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-icon admin-tone-blue">
+            <UserCheck size={16} />
           </div>
-          <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-            <Clock size={20} />
+          <span className="admin-kpi-label">VERIFIED CREATORS REFERRED</span>
+          <div className="admin-kpi-value">
+            {loading ? "…" : data.verifiedCreators}
           </div>
+          <span className="admin-kpi-sub">{data.pendingVerification} pending onboarding check</span>
         </div>
       </div>
 
-      {/* Verified Commission Breakdown Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between">
+      {/* Itemized Commission Table */}
+      <div className="admin-panel admin-table-panel">
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #e8e9ef",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "10px",
+          }}
+        >
           <div>
-            <h3 className="text-sm font-bold text-gray-900">Approved Commission Breakdown</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Itemized commissions credited from verified creator referrals ({verifiedList.length} total).
+            <h2 style={{ fontSize: "13px", fontWeight: "650", color: "#292b3e", margin: 0 }}>
+              Approved Commission Breakdown
+            </h2>
+            <p style={{ fontSize: "11px", color: "#85889d", margin: "4px 0 0" }}>
+              Itemized list of all commissions credited from verified creator onboardings ({verifiedList.length} total).
             </p>
           </div>
+
           <Link
             href="/student/verified-creators"
-            className="text-xs font-semibold text-[#7459d2] hover:underline inline-flex items-center gap-1"
+            className="admin-text-link"
           >
-            <span>Verified Creators</span>
+            <span>View Verified Creators</span>
             <ArrowRight size={12} />
           </Link>
         </div>
 
-        {verifiedList.length === 0 ? (
-          <div className="py-12 px-4 text-center">
-            <div className="w-10 h-10 rounded-full bg-purple-50 text-[#7459d2] flex items-center justify-center mx-auto mb-2">
-              <CheckCircle2 size={20} />
-            </div>
-            <h4 className="text-xs font-bold text-gray-800">No approved commissions yet</h4>
-            <p className="text-[11px] text-gray-400 max-w-sm mx-auto mt-1 leading-relaxed">
-              When creator referrals are verified by administration, their follower-based commission reward will appear here.
+        {loading ? (
+          <div className="admin-empty-state" style={{ minHeight: "260px" }}>
+            <div
+              style={{
+                width: "28px",
+                height: "28px",
+                border: "2px solid #7359d2",
+                borderTopColor: "transparent",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+                marginBottom: "12px",
+              }}
+            />
+            <b>Loading commission records…</b>
+          </div>
+        ) : verifiedList.length === 0 ? (
+          <div className="admin-empty-state" style={{ minHeight: "240px" }}>
+            <Wallet size={32} style={{ color: "#c4c7d6", marginBottom: "8px" }} />
+            <b>No approved commissions yet</b>
+            <p style={{ margin: "5px 0 16px", fontSize: "11px", color: "#8b8fa2", maxWidth: "420px" }}>
+              When creators sign up through your referral link and complete verification, follower-based rewards are added to your ledger.
             </p>
+            <Link href="/student/dm-templates" className="admin-button">
+              <span>View Outreach Templates</span>
+            </Link>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+          <div className="admin-table-scroll">
+            <table className="admin-table">
               <thead>
-                <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 uppercase tracking-wider text-[10px] font-bold">
-                  <th className="py-3 px-4">Creator</th>
-                  <th className="py-3 px-4">Followers</th>
-                  <th className="py-3 px-4">Commission Tier</th>
-                  <th className="py-3 px-4">Verified Date</th>
-                  <th className="py-3 px-4 text-right">Commission Amount</th>
+                <tr>
+                  <th>CREATOR NAME & HANDLE</th>
+                  <th>VERIFIED FOLLOWERS</th>
+                  <th>COMMISSION TIER</th>
+                  <th>VERIFIED DATE</th>
+                  <th style={{ textAlign: "right" }}>COMMISSION CREDITED</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {verifiedList.map((ref) => (
-                  <tr key={ref._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-900">{ref.creatorName}</div>
-                      <div className="text-[#7459d2] font-mono text-[11px] flex items-center gap-1 mt-0.5">
-                        <InstagramIcon size={11} />
-                        <span>@{ref.creatorHandle}</span>
+                  <tr key={ref._id}>
+                    <td>
+                      <div>
+                        <span className="admin-primary-cell">{ref.creatorName}</span>
+                        <div
+                          style={{
+                            fontSize: "10px",
+                            fontFamily: "monospace",
+                            color: "#7257ce",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            marginTop: "2px",
+                          }}
+                        >
+                          <InstagramIcon size={11} />
+                          <span>@{ref.creatorHandle}</span>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-gray-900">
+                    <td>
+                      <div style={{ fontWeight: "600", color: "#2d3043" }}>
                         {(ref.confirmedFollowers ?? ref.followers ?? 0).toLocaleString()}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-[#6247bf] border border-purple-100">
+                    <td>
+                      <span className="admin-status-pill admin-status-approved">
                         {ref.commissionTierLabel || "Standard Follower Tier"}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-gray-500">
-                      {ref.verifiedAt
-                        ? new Date(ref.verifiedAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "—"}
+                    <td>
+                      <span style={{ color: "#676a7c" }}>
+                        {ref.verifiedAt
+                          ? new Date(ref.verifiedAt).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "—"}
+                      </span>
                     </td>
-                    <td className="py-3.5 px-4 text-right font-extrabold text-emerald-700">
-                      ₹{ref.commissionEarned || 0}
+                    <td style={{ textAlign: "right" }}>
+                      <span style={{ fontWeight: "700", color: "#15845f", fontSize: "11.5px" }}>
+                        ₹{ref.commissionEarned || 0}
+                      </span>
                     </td>
                   </tr>
                 ))}

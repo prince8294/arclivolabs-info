@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cleanText, objectId } from "@/lib/validations/common";
+import { cleanText, objectId, safeUrl } from "@/lib/validations/common";
 
 export const campaignCreateSchema = z.object({
   title: cleanText(180, 2),
@@ -29,16 +29,16 @@ export const campaignCreateSchema = z.object({
 export const creatorProfileUpdateSchema = z.object({
   fullName: cleanText(120, 2).optional(),
   phone: cleanText(32, 7).optional(),
-  profileImage: z.string().trim().url().max(2048).optional(),
+  profileImage: safeUrl.optional(),
   bio: cleanText(3000, 1).optional(),
   instagramUsername: cleanText(64, 1).optional(),
-  instagramUrl: z.string().trim().url().max(2048).optional(),
+  instagramUrl: safeUrl.optional(),
   youtubeChannel: cleanText(250, 1).optional(),
-  youtubeUrl: z.string().trim().url().max(2048).optional(),
+  youtubeUrl: safeUrl.optional(),
   otherSocialPlatforms: z.array(z.object({
     platform: cleanText(50, 1),
     username: cleanText(100, 1),
-    url: z.string().trim().url().max(2048).optional(),
+    url: safeUrl.optional(),
   })).max(20).optional(),
   primaryPlatform: cleanText(50, 1).optional(),
   contentCategories: z.array(cleanText(100, 1)).min(1).max(30).optional(),
@@ -47,7 +47,7 @@ export const creatorProfileUpdateSchema = z.object({
   location: cleanText(160, 2).optional(),
   country: cleanText(100, 2).optional(),
   languages: z.array(cleanText(50, 1)).max(30).optional(),
-  portfolioUrl: z.string().trim().url().max(2048).optional(),
+  portfolioUrl: safeUrl.optional(),
   availability: z.enum(["available", "unavailable"]).optional(),
 }).strict();
 

@@ -5,7 +5,7 @@ import { ArrowDown, ArrowUpRight, Sparkles } from "lucide-react";
 import { CreatorDirectory } from "./creator-directory";
 import { CtaBand } from "@/components/cta-band";
 
-export const metadata: Metadata = { title: "Creators", description: "Explore a demo creator directory with searchable profiles and filters." };
+export const metadata: Metadata = { title: "Creators", description: "Explore approved ArclivoLabs creator profiles with searchable categories, locations, audience data, and Instagram links." };
 
 export default function CreatorsPage() {
   return <main className="creators-page">
